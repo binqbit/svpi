@@ -1,57 +1,50 @@
-# Serial Port Simple Read Write Protocol (SRWP)
+# Secure Vault Personal Information (SVPI)
 
 ## Project Description
 
-This project was developed for use with the Blaustahl Storage Device, providing a simple method for data transfer and memory management of the device via a serial port using the Simple Read Write Protocol (SRWP) API. The protocol implements basic read and write operations, ensuring reliable interaction with the device. The example and implementation of this protocol were specifically developed for [this fork of the repository](https://github.com/binqbit/blaustahl), which contains the Blaustahl Storage Device and corresponding drivers.
+Secure Vault Personal Information (SVPI) is software that securely stores personal data on a [Blaustahl Storage Device](https://github.com/binqbit/blaustahl). The project is developed based on a [Simple Read Write Protocol (SRWP)](https://github.com/binqbit/serialport_srwp), ensuring reliable interaction with the device through a serial port. SVPI provides users with functionality for managing, organizing, and optimizing data storage, making the use of the Blaustahl device more convenient and efficient.
 
-## Data Transfer Protocol
+The primary goal of SVPI is to offer a simple and intuitive interface for working with personal data, which avoids complex operations and eases data management for the user. The project is targeted at those who need a reliable and easily accessible storage solution for confidential information.
 
-The SRWP protocol allows interaction with the Blaustahl Storage Device through a serial port. It uses commands, each defined by a unique code, and includes a zero byte indicating that it is an SRWP command.
+## Commands
 
-### Protocol Commands
+SVPI supports a number of commands that help users interact with the Blaustahl Storage Device:
 
-1. **CMD_TEST (0x00):** Used for testing data transmission. The command sends data to the device and expects it to be returned. Returns bytes of data received from the device.
-2. **CMD_READ (0x01):** Reads data from the device. Requires specifying the address and the length of the data to be read. Returns bytes of data read from the specified address.
-3. **CMD_WRITE (0x02):** Writes data to the device. Requires specifying the address and the data to be written. This command does not return any data.
+- `svpi init / i <memory_size>`: Initializes the device with the specified memory size. This command prepares the device for operation by creating the necessary data architecture.
 
-### Command Transmission Format
+- `svpi format / f`: Formats all data on the device. Allows the user to clear all saved data if needed.
 
-Each command begins with a zero byte indicating an SRWP command and follows the format:
+- `svpi list / l`: Displays a list of all saved data. Useful for quickly viewing available information.
 
-- **SRWP\_CMD (0x00):** Indicates the start of an SRWP command.
+- `svpi set / s <name> <data>`: Saves data on the device. This command allows the user to enter new information into the storage.
 
-- **CMD_TEST:**
-  - `SRWP_CMD` - Zero byte indicating an SRWP command.
-  - `CMD_TEST` - Command code.
-  - `<data length>` - 4 bytes indicating the length of the data.
-  - `<data>` - Bytes of data to be transmitted.
-  - **Returns:** Bytes of data sent back from the device.
+- `svpi get / g <name>`: Retrieves data by the specified name. Simplifies access to specific information in the storage.
 
-- **CMD_READ:**
-  - `SRWP_CMD` - Zero byte indicating an SRWP command.
-  - `CMD_READ` - Command code.
-  - `<address>` - 4 bytes indicating the starting address for reading.
-  - `<length>` - 4 bytes indicating the length of the data to be read.
-  - **Returns:** Bytes of data read from the specified address.
+- `svpi remove / r <name>`: Deletes data by the specified name. Allows the user to free up memory by removing unnecessary data.
 
-- **CMD_WRITE:**
-  - `SRWP_CMD` - Zero byte indicating an SRWP command.
-  - `CMD_WRITE` - Command code.
-  - `<address>` - 4 bytes indicating the starting address for writing.
-  - `<data length>` - 4 bytes indicating the length of the data to be written.
-  - `<data>` - Bytes of data to be written.
-  - **Returns:** This command does not return any data.
+- `svpi optimize / o`: Optimizes memory usage. Combines free space and removes fragmentation to make more space available for new data.
 
-## SRWP Protocol Description
+## Data Storage Architecture
 
-The SRWP protocol is a simple and effective method for memory management of the Blaustahl Storage Device via a serial port. It supports basic read and write operations, ensuring reliable interaction between the device and the host. The example code demonstrates the use of the `serialport` library to implement the protocol.
+SVPI uses a carefully designed segment architecture for managing and storing data on the Blaustahl device. This structure allows for efficient organization of information, ensuring quick access and ease of management.
 
-SRWP uses various commands to manage data transfer, making it a flexible and easy-to-use solution for applications requiring reliable data transmission.
+### Data Storage Format:
 
-## Getting Started
+1. Data Initialization (INIT_SEGMENTS_DATA):
+   - `"\0<INIT_SEGMENTS_DATA>\0"`: Marker for the start of segment initialization data.
+   - `<memory size> (4 bytes)`: Four bytes allocated to store the size of the device's entire memory.
+   - `"\0</INIT_SEGMENTS_DATA>\0"`: Marker for the end of segment initialization data.
 
-To get started with the SRWP protocol, follow these steps:
+2. Segment Data:
+   - `<segment 1..N bytes...> (space specified in metadata)`: A sequence of segment data from the first to the Nth, each storing information saved by the user.
 
-1. Connect the Blaustahl Storage Device to your computer via USB.
-2. Ensure the serial port is configured correctly (9600 baud, 8 data bits, 1 stop bit, software flow control, no parity).
-3. Use the provided code to perform read and write operations on the device.
+3. Segment Metadata:
+   - `<segment metadata N..1> (40 bytes)`: Sequence of segment metadata starting from the last segment and ending with the first. Each metadata entry includes:
+     - Address (4 bytes): Indicates the starting position of the segment in memory.
+     - Size (4 bytes): Determines the amount of memory occupied by the segment.
+     - Name (32 bytes): A string identifying the segment allowing the user to easily locate and manage it.
+   - `<number of segments> (4 bytes):` A number indicating the total number of segments stored on the device. Located directly before the segment metadata and occupies 4 bytes.
+
+### Why This Structure is Needed:
+
+This architecture provides a clear organization of data on the device, allowing for easy addition, extraction, and deletion of information. Initialization markers help verify data integrity, while segment metadata ensures ease of management and memory optimization. This storage method effectively utilizes available space and minimizes fragmentation, thereby increasing the device's performance.
