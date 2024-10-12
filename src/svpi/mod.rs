@@ -19,13 +19,13 @@ pub fn format_data() -> std::io::Result<()> {
 pub fn print_segments_info() -> std::io::Result<()> {
     if let Some(mut seg_mgmt) = load_segments_info()? {
         print_memory_state(&seg_mgmt, None);
-        println!("{}", "=".repeat(139));
-        println!("| {:32} | {:100} |", "Name", "Data");
-        println!("{}", "=".repeat(139));
+        println!("{}", "=".repeat(109));
+        println!("| {:32} | {:70} |", "Name", "Data");
+        println!("{}", "=".repeat(109));
         for seg in seg_mgmt.get_segments_info().iter() {
             let data = seg_mgmt.read_segment_data(seg)?;
-            println!("| {:32} | {:100} |", seg.get_name(), data);
-            println!("{}", "-".repeat(139));
+            println!("| {:32} | {:70} |", seg.get_name(), data);
+            println!("{}", "-".repeat(109));
         }
     }
     Ok(())
