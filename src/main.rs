@@ -1,85 +1,83 @@
+
 mod spdm;
+mod seg_mgmt;
+mod svpi;
+
+use std::io::Write;
 
 use spdm::SerialPortDataManager;
-use std::io::{self, Write};
 
 fn main() -> std::io::Result<()> {
-    let mut spdm = SerialPortDataManager::find_device();
-
-    let data = spdm.test(b"Hello, World!")?;
-    if data != b"Hello, World!" {
-        eprintln!("Test connection failed: {:?}", std::str::from_utf8(&data).unwrap());
-    } else {
-        println!("Test connection successful.");
-    }
-
-    println!("Available commands:");
-    println!("\t@ <new_address> - Set Address");
-    println!("\t# <new_length>  - Set Length");
-
-    let mut address = 0;
-    let mut length = 100;
-
-    loop {
-        println!("{}", "-".repeat(34));
-        println!("| Address: {address:5} | Length: {length:5} |");
-        match spdm.read_data(address, length) {
-            Ok(bytes_read) => {
-                match std::str::from_utf8(&bytes_read) {
-                    Ok(str) => {
-                        let data = format!("{str:?}");
-                        println!("{}", "-".repeat(if data.len() > 100 { 4 + data.len() } else { 104 }));
-                        println!("| {data:100} |");
-                        println!("{}", "-".repeat(if data.len() > 100 { 4 + data.len() } else { 104 }));
-                    },
-                    Err(err) => eprintln!("Error decoding data: {}", err),
+    match std::env::args().nth(1) {
+        Some(cmd) => {
+            match cmd.as_str() {
+                "init" | "i" => {
+                    print!("Are you sure you want to initialize the device? (y/N): ");
+                    std::io::stdout().flush()?;
+                    let mut confirm = String::new();
+                    std::io::stdin().read_line(&mut confirm)?;
+                    if confirm.trim() != "y" {
+                        return Ok(());
+                    }
+                    let memory_size = std::env::args().nth(2).expect("Memory size is required!").parse::<u32>().expect("Memory size must be a number!");
+                    svpi::init_segments(memory_size)?;
+                },
+                "format" | "f" => {
+                    print!("Are you sure you want to format the data? (y/N): ");
+                    std::io::stdout().flush()?;
+                    let mut confirm = String::new();
+                    std::io::stdin().read_line(&mut confirm)?;
+                    if confirm.trim() != "y" {
+                        return Ok(());
+                    }
+                    svpi::format_data()?;
+                },
+                "list" | "l" => {
+                    svpi::print_segments_info()?;
+                },
+                "set" | "s" => {
+                    let name = std::env::args().nth(2).expect("Name is required!");
+                    let data = std::env::args().nth(3).expect("Data is required!");
+                    svpi::set_segment(&name, &data)?;
+                },
+                "get" | "g" => {
+                    let name = std::env::args().nth(2).expect("Name is required!");
+                    svpi::get_segment(&name)?;
+                },
+                "remove" | "r" => {
+                    let name = std::env::args().nth(2).expect("Name is required!");
+                    svpi::remove_segment(&name)?;
+                },
+                "optimize" | "o" => {
+                    svpi::optimize()?;
+                },
+                _ => {
+                    println!("Invalid command!");
+                    println!("Run `svpi` to see the list of available commands.");
                 }
             }
-            Err(e) => eprintln!("Error reading data: {}", e),
-        }
-
-        let mut res = String::new();
-
-        print!("> ");
-        io::stdout().flush()?;
-        io::stdin().read_line(&mut res).expect("Failed to read line");
-        let res = res.trim();
-
-        if res.is_empty() {
-            continue;
-        }
-
-        if res.starts_with("@ ") {
-            let mut parts = res.splitn(2, ' ');
-            let _ = parts.next().unwrap();
-            let value = parts.next().unwrap();
-            address = match value.parse() {
-                Ok(addr) => addr,
-                Err(_) => {
-                    eprintln!("Invalid address.");
-                    continue;
-                }
-            };
-            continue;
-        }
-
-        if res.starts_with("# ") {
-            let mut parts = res.splitn(2, ' ');
-            let _ = parts.next().unwrap();
-            let value = parts.next().unwrap();
-            length = match value.parse() {
-                Ok(len) => len,
-                Err(_) => {
-                    eprintln!("Invalid length.");
-                    continue;
-                }
-            };
-            continue;
-        }
-
-        let data = res.as_bytes();
-        if let Err(err) = spdm.write_data(address, data) {
-            eprintln!("Error writing data: {err}");
+        },
+        None => {
+            println!("# Secure Vault Personal Information (SVPI)");
+            println!("{}", "=".repeat(107));
+            println!("| {:40} | {:60} |", "Command", "Description");
+            println!("{}", "=".repeat(107));
+            println!("| {:40} | {:60} |", "svpi init / i <memory_size>", "Initialize the device for the desired memory architecture");
+            println!("{}", "-".repeat(107));
+            println!("| {:40} | {:60} |", "svpi format / f", "Format the data in the device");
+            println!("{}", "-".repeat(107));
+            println!("| {:40} | {:60} |", "svpi list / l", "Print all data list");
+            println!("{}", "-".repeat(107));
+            println!("| {:40} | {:60} |", "svpi set / s <name> <data>", "Set data");
+            println!("{}", "-".repeat(107));
+            println!("| {:40} | {:60} |", "svpi get / g <name>", "Get data");
+            println!("{}", "-".repeat(107));
+            println!("| {:40} | {:60} |", "svpi remove / r <name>", "Remove data");
+            println!("{}", "-".repeat(107));
+            println!("| {:40} | {:60} |", "svpi optimize / o", "Optimize the memory");
+            println!("{}", "-".repeat(107));
         }
     }
+
+    Ok(())
 }
