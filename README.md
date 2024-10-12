@@ -24,6 +24,10 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi optimize / o`: Optimizes memory usage. Combines free space and removes fragmentation to make more space available for new data.
 
+- `svpi version / v`: Displays the current version of the SVPI software. Useful for checking the software version and ensuring it is up to date.
+
+- `svpi` or `svpi help / h`: Displays a list of available commands and their descriptions. Useful for quickly checking available functionality.
+
 ## Data Storage Architecture
 
 SVPI uses a carefully designed segment architecture for managing and storing data on the Blaustahl device. This structure allows for efficient organization of information, ensuring quick access and ease of management.

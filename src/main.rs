@@ -7,6 +7,32 @@ use std::io::Write;
 
 use spdm::SerialPortDataManager;
 
+fn print_help() {
+    println!("# Secure Vault Personal Information (SVPI)");
+    println!("# Version: v1.0");
+    println!("{}", "=".repeat(107));
+    println!("| {:40} | {:60} |", "Command", "Description");
+    println!("{}", "=".repeat(107));
+    println!("| {:40} | {:60} |", "svpi init / i <memory_size>", "Initialize the device for the desired memory architecture");
+    println!("{}", "-".repeat(107));
+    println!("| {:40} | {:60} |", "svpi format / f", "Format the data in the device");
+    println!("{}", "-".repeat(107));
+    println!("| {:40} | {:60} |", "svpi list / l", "Print all data list");
+    println!("{}", "-".repeat(107));
+    println!("| {:40} | {:60} |", "svpi set / s <name> <data>", "Set data");
+    println!("{}", "-".repeat(107));
+    println!("| {:40} | {:60} |", "svpi get / g <name>", "Get data");
+    println!("{}", "-".repeat(107));
+    println!("| {:40} | {:60} |", "svpi remove / r <name>", "Remove data");
+    println!("{}", "-".repeat(107));
+    println!("| {:40} | {:60} |", "svpi optimize / o", "Optimize the memory");
+    println!("{}", "-".repeat(107));
+    println!("| {:40} | {:60} |", "svpi version / v", "Print the version of the application");
+    println!("{}", "-".repeat(107));
+    println!("| {:40} | {:60} |", "svpi help / h", "Print this help message");
+    println!("{}", "-".repeat(107));
+}
+
 fn main() -> std::io::Result<()> {
     match std::env::args().nth(1) {
         Some(cmd) => {
@@ -51,6 +77,12 @@ fn main() -> std::io::Result<()> {
                 "optimize" | "o" => {
                     svpi::optimize()?;
                 },
+                "version" | "v" => {
+                    println!("Secure Vault Personal Information (SVPI) v1.0");
+                },
+                "help" | "h" => {
+                    print_help();
+                },
                 _ => {
                     println!("Invalid command!");
                     println!("Run `svpi` to see the list of available commands.");
@@ -58,24 +90,7 @@ fn main() -> std::io::Result<()> {
             }
         },
         None => {
-            println!("# Secure Vault Personal Information (SVPI)");
-            println!("{}", "=".repeat(107));
-            println!("| {:40} | {:60} |", "Command", "Description");
-            println!("{}", "=".repeat(107));
-            println!("| {:40} | {:60} |", "svpi init / i <memory_size>", "Initialize the device for the desired memory architecture");
-            println!("{}", "-".repeat(107));
-            println!("| {:40} | {:60} |", "svpi format / f", "Format the data in the device");
-            println!("{}", "-".repeat(107));
-            println!("| {:40} | {:60} |", "svpi list / l", "Print all data list");
-            println!("{}", "-".repeat(107));
-            println!("| {:40} | {:60} |", "svpi set / s <name> <data>", "Set data");
-            println!("{}", "-".repeat(107));
-            println!("| {:40} | {:60} |", "svpi get / g <name>", "Get data");
-            println!("{}", "-".repeat(107));
-            println!("| {:40} | {:60} |", "svpi remove / r <name>", "Remove data");
-            println!("{}", "-".repeat(107));
-            println!("| {:40} | {:60} |", "svpi optimize / o", "Optimize the memory");
-            println!("{}", "-".repeat(107));
+            print_help();
         }
     }
 
