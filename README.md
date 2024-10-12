@@ -6,6 +6,10 @@ Secure Vault Personal Information (SVPI) is software that securely stores person
 
 The primary goal of SVPI is to offer a simple and intuitive interface for working with personal data, which avoids complex operations and eases data management for the user. The project is targeted at those who need a reliable and easily accessible storage solution for confidential information.
 
+## Build
+
+To build the SVPI project, execute the provided build scripts for your operating system: [Linux](./build.sh) and [Windows](./build.bat).
+
 ## Commands
 
 SVPI supports a number of commands that help users interact with the Blaustahl Storage Device:
