@@ -1,7 +1,7 @@
 mod utils;
 use utils::*;
 
-use crate::{seg_mgmt::DataType, utils::{console, crypto::encrypt}};
+use crate::{seg_mgmt::DataType, utils::{console, crypto::{decrypt, encrypt}}};
 
 pub fn init_segments(memory_size: u32) -> std::io::Result<()> {
     let mut seg_mgmt = get_segment_manager()?;
@@ -59,21 +59,28 @@ pub fn set_segment(name: &str, data: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn get_segment(name: &str) -> std::io::Result<()> {
+pub fn get_segment(name: &str) -> std::io::Result<Option<String>> {
     if let Some(mut seg_mgmt) = load_segments_info()? {
         if let Some(seg) = seg_mgmt.find_segment_by_name(name).cloned() {
             print_segments(&mut seg_mgmt, vec![seg.clone()], None)?;
             if seg.data_type == DataType::Encrypted {
                 let password = console::get_password(false);
                 if let Some(password) = password {
-                    print_segments(&mut seg_mgmt, vec![seg], Some(&password))?;
+                    print_segments(&mut seg_mgmt, vec![seg.clone()], Some(&password))?;
+                    let data = seg_mgmt.read_segment_data(&seg)?;
+                    let data = decrypt(&data, password.as_bytes())
+                        .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?;
+                    return Ok(Some(String::from_utf8_lossy(data.as_slice()).into_owned()));
                 }
+            } else {
+                let data = seg_mgmt.read_segment_data(&seg)?;
+                return Ok(Some(String::from_utf8_lossy(data.as_slice()).into_owned()));
             }
         } else {
             println!("Data '{}' not found!", name);
         }
     }
-    Ok(())
+    Ok(None)
 }
 
 pub fn remove_segment(name: &str) -> std::io::Result<()> {

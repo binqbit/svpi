@@ -48,8 +48,7 @@ pub fn print_segments(seg_mgmt: &mut SegmentManager, seg: Vec<Segment>, password
                     Err(_) => ("Error", "Password does not match".to_string()),
                 }
             } else {
-                let data = seg_mgmt.read_segment_data(seg)?;
-                ("Encrypted", format!("{} bytes", data.len()))
+                ("Encrypted", format!("{} bytes", seg.size))
             }
         } else {
             let data = seg_mgmt.read_segment_data(seg)?;

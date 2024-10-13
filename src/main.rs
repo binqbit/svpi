@@ -4,6 +4,7 @@ mod seg_mgmt;
 mod svpi;
 mod utils;
 
+use arboard::Clipboard;
 use spdm::SerialPortDataManager;
 use utils::{args, variables::VERSION};
 
@@ -42,6 +43,8 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi set --password2 / -p2 ...", "Use password with confirmation for encryption");
     println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi set/get --clipboard / -c", "Copy data to/from clipboard");
+    println!("{}", "-".repeat(107));
 }
 
 fn main() -> std::io::Result<()> {
@@ -60,12 +63,26 @@ fn main() -> std::io::Result<()> {
                 },
                 "set" | "s" => {
                     let name = args::get_param(0).expect("Name is required!");
-                    let data = args::get_param(1).expect("Data is required!");
+                    let clipboard = args::get_flag(vec!["--clipboard", "-c"]);
+                    let data = if clipboard.is_some() {
+                        let mut clipboard = Clipboard::new().expect("Failed to create clipboard instance!");
+                        clipboard.get_text().expect("Failed to get text from clipboard!")
+                    } else {
+                        args::get_param(1).expect("Data is required!")
+                    };
                     svpi::set_segment(&name, &data)?;
                 },
                 "get" | "g" => {
                     let name = args::get_param(0).expect("Name is required!");
-                    svpi::get_segment(&name)?;
+                    let data = svpi::get_segment(&name)?;
+                    if let Some(data) = data {
+                        let clipboard = args::get_flag(vec!["--clipboard", "-c"]);
+                        if clipboard.is_some() {
+                            let mut clipboard = Clipboard::new().expect("Failed to create clipboard instance!");
+                            clipboard.set_text(data).expect("Failed to set text to clipboard!");
+                            println!("Data copied to clipboard!");
+                        }
+                    }
                 },
                 "remove" | "r" => {
                     let name = args::get_param(0).expect("Name is required!");

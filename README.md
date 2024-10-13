@@ -40,6 +40,8 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi set --password2 / -p2 ...`: Use password with confirmation for encryption
 
+- `svpi set/get --clipboard / -c`: Copy data to/from clipboard
+
 ## Data Storage Architecture
 
 SVPI uses a carefully designed segment architecture for managing and storing data on the Blaustahl device. This structure allows for efficient organization of information, ensuring quick access and ease of management.
