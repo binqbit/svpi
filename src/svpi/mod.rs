@@ -112,3 +112,22 @@ pub fn optimize() -> std::io::Result<()> {
     }
     Ok(())
 }
+
+pub fn export(file_name: &str) -> std::io::Result<()> {
+    if let Some(mut seg_mgmt) = load_segments_info()? {
+        let password = console::get_password(true);
+        let segs = seg_mgmt.get_segments_info();
+        export_to_file(&mut seg_mgmt, segs, file_name, password.as_ref())?;
+        println!("Data exported to '{}'", file_name);
+    }
+    Ok(())
+}
+
+pub fn import(file_name: &str) -> std::io::Result<()> {
+    if let Some(mut seg_mgmt) = load_segments_info()? {
+        let password = console::get_password(true);
+        import_from_file(&mut seg_mgmt, file_name, password.as_ref())?;
+        println!("Data imported from '{}'", file_name);
+    }
+    Ok(())
+}

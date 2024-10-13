@@ -28,6 +28,10 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi optimize / o`: Optimizes memory usage. Combines free space and removes fragmentation to make more space available for new data.
 
+- `svpi export / e <file_name>`: Export data to a file. Allows the user to save data from the device to an external file.
+
+- `svpi import / m <file_name>`: Import data from a file. Allows the user to load data from an external file to the device.
+
 - `svpi version / v`: Displays the current version of the SVPI software. Useful for checking the software version and ensuring it is up to date.
 
 - `svpi` or `svpi help / h`: Displays a list of available commands and their descriptions. Useful for quickly checking available functionality.

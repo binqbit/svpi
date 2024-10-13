@@ -29,6 +29,10 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi optimize / o", "Optimize the memory");
     println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi export / e <file_name>", "Export data to a file");
+    println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi import / m <file_name>", "Import data from a file");
+    println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi version / v", "Print the version of the application");
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi help / h", "Print this help message");
@@ -90,6 +94,14 @@ fn main() -> std::io::Result<()> {
                 },
                 "optimize" | "o" => {
                     svpi::optimize()?;
+                },
+                "export" | "e" => {
+                    let file_name = args::get_param(0).expect("File name is required!");
+                    svpi::export(&file_name)?;
+                },
+                "import" | "m" => {
+                    let file_name = args::get_param(0).expect("File name is required!");
+                    svpi::import(&file_name)?;
                 },
                 "version" | "v" => {
                     println!("Secure Vault Personal Information (SVPI) {}", VERSION);
