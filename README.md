@@ -32,6 +32,14 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi` or `svpi help / h`: Displays a list of available commands and their descriptions. Useful for quickly checking available functionality.
 
+## Flags
+
+- `svpi <command> [--flags...] <data>`: How to use flags
+
+- `svpi list/set --password / -p ...`: Use password for encryption/decryption
+
+- `svpi set --password2 / -p2 ...`: Use password with confirmation for encryption
+
 ## Data Storage Architecture
 
 SVPI uses a carefully designed segment architecture for managing and storing data on the Blaustahl device. This structure allows for efficient organization of information, ensuring quick access and ease of management.
@@ -47,9 +55,15 @@ SVPI uses a carefully designed segment architecture for managing and storing dat
    - `<segment 1..N bytes...> (space specified in metadata)`: A sequence of segment data from the first to the Nth, each storing information saved by the user.
 
 3. Segment Metadata:
-   - `<segment metadata N..1> (40 bytes)`: Sequence of segment metadata starting from the last segment and ending with the first. Each metadata entry includes:
+   - `<segment metadata N..1> (42 bytes)`: Sequence of segment metadata starting from the last segment and ending with the first. Each metadata entry includes:
      - Address (4 bytes): Indicates the starting position of the segment in memory.
      - Size (4 bytes): Determines the amount of memory occupied by the segment.
+     - Data Type (1 byte): Specifies the type of data:
+         - 0: Plain
+         - 1: Encrypted
+     - Status (1 byte): Indicates the status of the segment:
+         - 0: Deleted
+         - 1: Active
      - Name (32 bytes): A string identifying the segment allowing the user to easily locate and manage it.
    - `<number of segments> (4 bytes):` A number indicating the total number of segments stored on the device. Located directly before the segment metadata and occupies 4 bytes.
 

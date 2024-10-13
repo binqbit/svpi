@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 serialport = "4.5.1"
+ring = "0.17.8"
+rpassword = "7.3.1"

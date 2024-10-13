@@ -1,6 +1,6 @@
 use crate::spdm::SerialPortDataManager;
 
-pub type RawSegmentInfo = (u32, u32, [u8; 32]);
+pub type RawSegmentInfo = (u32, u32, DataType, bool, [u8; 32]);
 pub const SEGMENT_SIZE: u32 = std::mem::size_of::<RawSegmentInfo>() as u32;
 pub const START_INIT_DATA: &[u8] = b"\0<INIT_SEGMENTS_DATA>\0";
 pub const END_INIT_DATA: &[u8] = b"\0</INIT_SEGMENTS_DATA>\0";
@@ -16,7 +16,15 @@ pub struct Segment {
     pub index: u32,
     pub address: u32,
     pub size: u32,
+    pub data_type: DataType,
+    pub status: bool,
     pub name: [u8; 32],
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DataType {
+    Plain,
+    Encrypted,
 }
 
 impl SerialPortDataManager {

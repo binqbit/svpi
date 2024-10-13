@@ -1,11 +1,11 @@
-use super::{RawSegmentInfo, Segment, SegmentManager};
+use super::{DataType, RawSegmentInfo, Segment, SegmentManager};
 
 impl Segment {
-    pub fn new(index: u32, address: u32, size: u32, name: &str) -> Segment {
+    pub fn new(index: u32, address: u32, size: u32, data_type: DataType, name: &str) -> Segment {
         let name = name.as_bytes();
         let mut name_buf = [0; 32];
         name_buf[..name.len()].copy_from_slice(name);
-        Segment { index, address, size, name: name_buf }
+        Segment { index, address, size, data_type, status: true, name: name_buf }
     }
 
     pub fn from_raw(index: u32, raw: RawSegmentInfo) -> Segment {
@@ -13,12 +13,14 @@ impl Segment {
             index,
             address: raw.0,
             size: raw.1,
-            name: raw.2,
+            data_type: raw.2,
+            status: raw.3,
+            name: raw.4,
         }
     }
 
     pub fn to_raw(&self) -> RawSegmentInfo {
-        (self.address, self.size, self.name)
+        (self.address, self.size, self.data_type.clone(), self.status, self.name)
     }
 
     pub fn set_index(&mut self, index: u32) {
@@ -29,14 +31,18 @@ impl Segment {
         self.size = size;
     }
 
+    pub fn set_data_type(&mut self, data_type: DataType) {
+        self.data_type = data_type;
+    }
+
+    pub fn set_status(&mut self, status: bool) {
+        self.status = status;
+    }
+
     pub fn set_name(&mut self, name: &str) {
         let name = name.as_bytes();
         self.name = [0; 32];
         self.name[..name.len()].copy_from_slice(name);
-    }
-
-    pub fn is_removed(&self) -> bool {
-        self.name == [0; 32]
     }
 
     pub fn get_name(&self) -> String {
@@ -45,11 +51,11 @@ impl Segment {
 }
 
 impl SegmentManager {
-    pub fn add_segment(&mut self, name: &str, size: u32) -> std::io::Result<Option<&Segment>> {
+    pub fn add_segment(&mut self, name: &str, size: u32, data_type: DataType) -> std::io::Result<Option<&Segment>> {
         let seg_index = self.find_segment_by_name(name).map(|seg| seg.index);
         let address = self.find_new_segment_address(size);
         if let Some(address) = address {
-            let segment = Segment::new(self.segments.len() as u32, address, size, name);
+            let segment = Segment::new(self.segments.len() as u32, address, size, data_type, name);
             self.save_segment_info(&segment)?;
             self.segments.insert(0, segment);
             self.save_segments_count()?;
@@ -64,7 +70,7 @@ impl SegmentManager {
 
     pub fn remove_segment(&mut self, index: u32) -> std::io::Result<bool> {
         let seg = if let Some(seg) = self.find_segment_by_index(index) {
-            seg.name = [0; 32];
+            seg.set_status(false);
             Some(seg.clone())
         } else {
             None
@@ -75,14 +81,13 @@ impl SegmentManager {
         Ok(seg.is_some())
     }
 
-    pub fn read_segment_data(&mut self, seg: &Segment) -> std::io::Result<String> {
-        let data = self.read_data(seg.address, seg.size)?;
-        Ok(String::from_utf8_lossy(&data).trim_end_matches(char::from(0)).to_string())
+    pub fn read_segment_data(&mut self, seg: &Segment) -> std::io::Result<Vec<u8>> {
+        self.read_data(seg.address, seg.size)
     }
 
-    pub fn write_segment_data(&mut self, seg: &Segment, data: &str) -> std::io::Result<bool> {
+    pub fn write_segment_data(&mut self, seg: &Segment, data: &[u8]) -> std::io::Result<bool> {
         if data.len() <= seg.size as usize {
-            self.write_data(seg.address, data.as_bytes())?;
+            self.write_data(seg.address, data)?;
             Ok(true)
         } else {
             Ok(false)

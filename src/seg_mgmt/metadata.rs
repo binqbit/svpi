@@ -55,7 +55,7 @@ impl SegmentManager {
 
     pub fn get_segments_info(&self) -> Vec<Segment> {
         self.segments.iter()
-            .filter(|segment| !segment.is_removed())
+            .filter(|segment| segment.status)
             .cloned()
             .collect()
     }
