@@ -29,9 +29,9 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi optimize / o", "Optimize the memory");
     println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi export / e <file_name>", "Export data to a file");
+    println!("| {:50} | {:50} |", "svpi export / e [--password / -p] <file_name>", "Export data to a file with decryption option");
     println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi import / m <file_name>", "Import data from a file");
+    println!("| {:50} | {:50} |", "svpi import / m [--password / -p] <file_name>", "Import data from a file with encryption option");
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi version / v", "Print the version of the application");
     println!("{}", "-".repeat(107));

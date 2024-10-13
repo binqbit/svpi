@@ -63,23 +63,32 @@ pub fn print_segments(seg_mgmt: &mut SegmentManager, seg: Vec<Segment>, password
     Ok(())
 }
 
+fn export_segment_with_type(seg: &Segment, data: &[u8], is_encrypted: bool) -> (String, String) {
+    let (name, data) = if is_encrypted {
+        (format!("@{}", seg.get_name()), base64::encode(&data))
+    } else {
+        (seg.get_name(), String::from_utf8_lossy(data).into_owned())
+    };
+    (name, data)
+}
+
 pub fn export_to_file(seg_mgmt: &mut SegmentManager, seg: Vec<Segment>, file_path: &str, password: Option<&String>) -> std::io::Result<()> {
     let mut list = Vec::new();
     for seg in seg.iter() {
         let data = seg_mgmt.read_segment_data(seg)?;
-        let data = if seg.data_type == DataType::Encrypted {
+        let (name, data) = if seg.data_type == DataType::Encrypted {
             if let Some(password) = password {
                 match decrypt(&data, password.as_bytes()) {
-                    Ok(data) => String::from_utf8_lossy(data.as_slice()).into_owned(),
-                    Err(_) => "Password does not match".to_string(),
+                    Ok(data) => export_segment_with_type(seg, &data, false),
+                    Err(_) => export_segment_with_type(seg, &data, true),
                 }
             } else {
-                format!("{} bytes", seg.size)
+                export_segment_with_type(seg, &data, true)
             }
         } else {
-            String::from_utf8_lossy(data.as_slice()).into_owned()
+            export_segment_with_type(seg, &data, false)
         };
-        list.push((seg.get_name(), data));
+        list.push((name, data));
     }
     let text = list.iter().map(|(k, v)| format!("{}: {}\n", k, v)).collect::<String>();
     let mut file = std::fs::File::create(file_path)?;
@@ -93,20 +102,25 @@ pub fn import_from_file(seg_mgmt: &mut SegmentManager, file_path: &str, password
         let mut parts = line.splitn(2, ": ");
         let name = parts.next().unwrap().trim();
         let data = parts.next().unwrap().trim();
-        (name, data)
-    }).collect::<Vec<(&str, &str)>>();
-    let data_type = if password.is_some() {
-        DataType::Encrypted
-    } else {
-        DataType::Plain
-    };
-    for (name, data) in list.iter() {
-        let data = if let Some(password) = password {
-            let data = encrypt(data.as_bytes(), password.as_bytes())
-                .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?;
-            data
+        let (name, data_type) = if name.starts_with("@") {
+            (&name[1..], DataType::Encrypted)
         } else {
-            data.as_bytes().to_vec()
+            (name, DataType::Plain)
+        };
+        (name, data, data_type)
+    }).collect::<Vec<(&str, &str, DataType)>>();
+    for (name, data, data_type) in list.iter() {
+        let (data, data_type) = if data_type == &DataType::Plain {
+            if let Some(password) = password {
+                let data = encrypt(data.as_bytes(), password.as_bytes())
+                    .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?;
+                (data, DataType::Encrypted)
+            } else {
+                (data.as_bytes().to_vec(), data_type.clone())
+            }
+        } else {
+            let data = base64::decode(data).map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid base64 data!"))?;
+            (data, data_type.clone())
         };
         let seg = seg_mgmt.add_segment(name, data.len() as u32, data_type.clone()).map(|seg| seg.cloned())?;
         if let Some(seg) = seg {
