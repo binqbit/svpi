@@ -1,4 +1,4 @@
-use crate::{seg_mgmt::{Segment, SegmentManager}, spdm::SerialPortDataManager};
+use crate::{seg_mgmt::{DataType, Segment, SegmentManager}, spdm::SerialPortDataManager, utils::crypto::decrypt};
 
 
 pub fn load_segments_info() -> std::io::Result<Option<SegmentManager>> {
@@ -32,12 +32,32 @@ pub fn print_memory_state(seg_mgmt: &SegmentManager, optimized_size: Option<u32>
     }
 }
 
-pub fn print_segment(segment: &mut SegmentManager, seg: &Segment) -> std::io::Result<()> {
-    let data = segment.read_segment_data(seg)?;
-    let name = seg.get_name();
-    let line_size = 9 + name.len() + data.len();
-    println!("{}", "-".repeat(line_size));
-    println!("| {} = {:?} |", name, data);
-    println!("{}", "-".repeat(line_size));
+pub fn print_segments(seg_mgmt: &mut SegmentManager, seg: Vec<Segment>, password: Option<&String>) -> std::io::Result<()> {
+    println!("{}", "=".repeat(112));
+    println!("| {:32} | {:20} | {:50} |", "Name", "Data Type", "Data");
+    println!("{}", "=".repeat(112));
+    for seg in seg.iter() {
+        let data = seg_mgmt.read_segment_data(seg)?;
+        let (data_type, data) = if seg.data_type == DataType::Encrypted {
+            if let Some(password) = password {
+                match decrypt(&data, password.as_bytes()) {
+                    Ok(data) => {
+                        let data = String::from_utf8_lossy(data.as_slice()).into_owned();
+                        ("Decrypted", data)
+                    }
+                    Err(_) => ("Error", "Password does not match".to_string()),
+                }
+            } else {
+                let data = seg_mgmt.read_segment_data(seg)?;
+                ("Encrypted", format!("{} bytes", data.len()))
+            }
+        } else {
+            let data = seg_mgmt.read_segment_data(seg)?;
+            let data = String::from_utf8_lossy(data.as_slice()).into_owned();
+            ("Plain", data)
+        };
+        println!("| {:32} | {:20} | {:50} |", seg.get_name(), data_type, data);
+        println!("{}", "-".repeat(112));
+    }
     Ok(())
 }
