@@ -47,8 +47,8 @@ pub fn set_segment(name: &str, data: &str) -> std::io::Result<()> {
         (data.as_bytes().to_vec(), DataType::Plain)
     };
     if let Some(mut seg_mgmt) = load_segments_info()? {
-        if let Some(seg) = seg_mgmt.add_segment(name, data.len() as u32, data_type).map(|seg| seg.cloned())? {
-            seg_mgmt.write_segment_data(&seg, &data)?;
+        let seg = seg_mgmt.set_segment(name, &data, data_type).map(|seg| seg.cloned())?;
+        if let Some(seg) = seg {
             print_segments(&mut seg_mgmt, vec![seg], password.as_ref())?;
             println!("Data '{}' saved!", name);
         } else {

@@ -32,6 +32,8 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi import / m [--password / -p] <file_name>`: Import data from a file with encryption option. Allows the user to load data from an external file to the device.
 
+- `svpi check`: Check if the device supports SRWP protocol. Useful for verifying the device's compatibility with the SVPI software.
+
 - `svpi version / v`: Displays the current version of the SVPI software. Useful for checking the software version and ensuring it is up to date.
 
 - `svpi` or `svpi help / h`: Displays a list of available commands and their descriptions. Useful for quickly checking available functionality.

@@ -122,10 +122,8 @@ pub fn import_from_file(seg_mgmt: &mut SegmentManager, file_path: &str, password
             let data = base64::decode(data).map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid base64 data!"))?;
             (data, data_type.clone())
         };
-        let seg = seg_mgmt.add_segment(name, data.len() as u32, data_type.clone()).map(|seg| seg.cloned())?;
-        if let Some(seg) = seg {
-            seg_mgmt.write_segment_data(&seg, &data)?;
-        } else {
+        let seg = seg_mgmt.set_segment(name, &data, data_type.clone())?;
+        if seg.is_none() {
             println!("Not enough memory!");
             println!("Please optimize the memory: svpi optimize");
             break;

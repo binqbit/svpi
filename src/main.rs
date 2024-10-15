@@ -33,6 +33,8 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi import / m [--password / -p] <file_name>", "Import data from a file with encryption option");
     println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi check", "Check if the device supports SRWP protocol");
+    println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi version / v", "Print the version of the application");
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi help / h", "Print this help message");
@@ -102,6 +104,16 @@ fn main() -> std::io::Result<()> {
                 "import" | "m" => {
                     let file_name = args::get_param(0).expect("File name is required!");
                     svpi::import(&file_name)?;
+                },
+                "check" => {
+                    let mut spdm = SerialPortDataManager::find_device();
+                    let msg = b"Hello, World!";
+                    let data = spdm.test(msg).expect("Failed to test device!");
+                    if data == msg {
+                        println!("Device supports SRWP protocol");
+                    } else {
+                        println!("Device does not support SRWP protocol");
+                    }
                 },
                 "version" | "v" => {
                     println!("Secure Vault Personal Information (SVPI) {}", VERSION);

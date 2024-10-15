@@ -51,12 +51,13 @@ impl Segment {
 }
 
 impl SegmentManager {
-    pub fn add_segment(&mut self, name: &str, size: u32, data_type: DataType) -> std::io::Result<Option<&Segment>> {
+    pub fn set_segment(&mut self, name: &str, data: &[u8], data_type: DataType) -> std::io::Result<Option<&Segment>> {
         let seg_index = self.find_segment_by_name(name).map(|seg| seg.index);
-        let address = self.find_new_segment_address(size);
+        let address = self.find_new_segment_address(data.len() as u32);
         if let Some(address) = address {
-            let segment = Segment::new(self.segments.len() as u32, address, size, data_type, name);
+            let segment = Segment::new(self.segments.len() as u32, address, data.len() as u32, data_type, name);
             self.save_segment_info(&segment)?;
+            self.write_segment_data(&segment, data)?;
             self.segments.insert(0, segment);
             self.save_segments_count()?;
             if let Some(seg_index) = seg_index {
