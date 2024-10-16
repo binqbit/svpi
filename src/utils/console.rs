@@ -12,28 +12,19 @@ pub fn confirm(text: &str) -> bool {
     confirm.trim() == "y"
 }
 
-pub fn get_password(check_flag: bool) -> Option<String> {
-    if !check_flag {
-        print!("Password: ");
-        std::io::stdout().flush().unwrap();
-        let password = read_password().unwrap().trim().to_string();
-        if password.is_empty() {
-            return None;
-        }
-        return Some(password);
-    }
-    
+pub fn get_password(check_flag: bool, confirm: bool, text: Option<String>) -> Option<String> {
+    let text = text.unwrap_or("Password".to_string());
     let password_flag = args::get_flag(vec!["--password", "-p", "--password2", "-p2"]);
-    if let Some(password_flag) = password_flag {
+    if !check_flag || password_flag.is_some() {
         loop {
-            print!("Password: ");
+            print!("{text}: ");
             std::io::stdout().flush().unwrap();
             let password = read_password().unwrap().trim().to_string();
             if password.is_empty() {
                 return None;
             }
-            if let "--password2" | "-p2" = password_flag.as_str() {
-                print!("Confirm password: ");
+            if confirm || password_flag == Some("--password2".to_string()) || password_flag == Some("-p2".to_string()) {
+                print!("Confirm {text}: ");
                 std::io::stdout().flush().unwrap();
                 let confirm_password = read_password().unwrap().trim().to_string();
                 if !confirm_password.is_empty() {

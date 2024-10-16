@@ -33,6 +33,10 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi import / m [--password / -p] <file_name>", "Import data from a file with encryption option");
     println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi set-password / sp", "Set root password");
+    println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi reset-password / rp", "Reset root password");
+    println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi check", "Check if the device supports SRWP protocol");
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi version / v", "Print the version of the application");
@@ -43,11 +47,13 @@ fn print_help() {
     println!("{}", "=".repeat(107));
     println!("| {:50} | {:50} |", "Flags", "Description");
     println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi <command> [--flags...] <data>", "How to use flags");
+    println!("| {:50} | {:50} |", "svpi <command> [flags...] [params...]", "How to use flags");
     println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi list/set --password / -p ...", "Use password for encryption/decryption");
+    println!("| {:50} | {:50} |", "svpi list/set --password / -p", "Use password for encryption/decryption");
     println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi set --password2 / -p2 ...", "Use password with confirmation for encryption");
+    println!("| {:50} | {:50} |", "svpi set --password2 / -p2", "Use password with confirmation for encryption");
+    println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi set --root-encrypt / -re", "Use root password for encryption/decryption");
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi set/get --clipboard / -c", "Copy data to/from clipboard");
     println!("{}", "-".repeat(107));
@@ -106,6 +112,12 @@ fn main() -> std::io::Result<()> {
                 "import" | "m" => {
                     let file_name = args::get_param(0).expect("File name is required!");
                     svpi::import(&file_name)?;
+                },
+                "set-password" | "sp" => {
+                    svpi::set_root_password()?;
+                },
+                "reset-password" | "rp" => {
+                    svpi::reset_root_password()?;
                 },
                 "check" => {
                     let mut spdm = SerialPortDataManager::find_device();

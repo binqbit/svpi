@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate::{seg_mgmt::{DataType, Segment, SegmentManager}, spdm::SerialPortDataManager, utils::{args, crypto::{decrypt, encrypt}}};
+use crate::{seg_mgmt::{DataType, Segment, SegmentManager}, spdm::SerialPortDataManager, utils::{args, console, crypto::{decrypt, encrypt}}};
 
 
 pub fn load_segments_info() -> std::io::Result<Option<SegmentManager>> {
@@ -18,6 +18,23 @@ pub fn load_segments_info() -> std::io::Result<Option<SegmentManager>> {
 pub fn get_segment_manager() -> std::io::Result<SegmentManager> {
     let spdm = SerialPortDataManager::find_device();
     Ok(spdm.into_segment_manager())
+}
+
+pub fn get_password(seg_mgmt: &mut SegmentManager, check_flag: bool, confirm: bool) -> std::io::Result<Option<String>> {
+    let password = console::get_password(check_flag, confirm, None);
+    if let Some(password) = &password {
+        if args::get_flag(vec!["--root-encrypt", "-re"]).is_some() {
+            if !seg_mgmt.is_root_password_set()? {
+                return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Root password not set!"));
+            } else {
+                let root_password = seg_mgmt.get_root_password()?;
+                let root_password = decrypt(&root_password, password.as_bytes())
+                    .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?;
+                return Ok(Some(String::from_utf8_lossy(root_password.as_slice()).into_owned()));
+            }
+        }
+    }
+    Ok(password)
 }
 
 pub fn print_memory_state(seg_mgmt: &SegmentManager, optimized_size: Option<u32>) {

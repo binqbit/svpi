@@ -1,4 +1,4 @@
-use super::{SegmentManager, END_INIT_DATA, SEGMENT_SIZE, START_INIT_DATA};
+use super::{SegmentManager, END_INIT_DATA, ROOT_PASSWORD_SIZE, SEGMENT_SIZE, START_INIT_DATA};
 
 impl SegmentManager {
     pub fn segments_info_address(&self) -> u32 {
@@ -9,8 +9,12 @@ impl SegmentManager {
         self.segments_info_address() - (index + 1) * SEGMENT_SIZE
     }
 
-    pub fn start_data_address(&self) -> u32 {
+    pub fn root_password_address(&self) -> u32 {
         START_INIT_DATA.len() as u32 + 4 + END_INIT_DATA.len() as u32
+    }
+
+    pub fn start_data_address(&self) -> u32 {
+        self.root_password_address() + ROOT_PASSWORD_SIZE
     }
 
     pub fn end_data_address(&self) -> u32 {

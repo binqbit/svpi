@@ -16,6 +16,23 @@ impl SegmentManager {
         Ok(Some(address))
     }
 
+    pub fn get_root_password(&mut self) -> std::io::Result<Vec<u8>> {
+        self.read_values(self.root_password_address(), RecordDirection::Right)
+    }
+
+    pub fn set_root_password(&mut self, password: &[u8]) -> std::io::Result<()> {
+        self.write_values(self.root_password_address(), password, RecordDirection::Right)
+    }
+
+    pub fn reset_root_password(&mut self) -> std::io::Result<()> {
+        self.set_root_password(&[])
+    }
+
+    pub fn is_root_password_set(&mut self) -> std::io::Result<bool> {
+        let password = self.get_root_password()?;
+        Ok(password.len() > 0)
+    }
+
     pub fn save_segments_count(&mut self) -> std::io::Result<()> {
         self.write_value(self.segments_info_address(), self.segments.len() as u32)
     }
@@ -29,6 +46,7 @@ impl SegmentManager {
         self.write_data(0, START_INIT_DATA)?;
         self.write_value(START_INIT_DATA.len() as u32, self.memory_size)?;
         self.write_data(START_INIT_DATA.len() as u32 + 4, END_INIT_DATA)?;
+        self.reset_root_password()?;
         let raw_segments: Vec<RawSegmentInfo> = self.segments.iter().map(Segment::to_raw).collect();
         self.write_values(self.segments_info_address(), &raw_segments, RecordDirection::Left)
     }

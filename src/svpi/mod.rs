@@ -1,7 +1,7 @@
 mod utils;
 use utils::*;
 
-use crate::{seg_mgmt::DataType, utils::{console, crypto::{decrypt, encrypt}}};
+use crate::{seg_mgmt::{DataType, SegmentManager}, utils::{args, console, crypto::{decrypt, encrypt}}};
 
 pub fn init_segments(memory_size: u32) -> std::io::Result<()> {
     let mut seg_mgmt = get_segment_manager()?;
@@ -13,6 +13,51 @@ pub fn init_segments(memory_size: u32) -> std::io::Result<()> {
     }
     seg_mgmt.init_segments(memory_size)?;
     println!("Device initialized!");
+    Ok(())
+}
+
+pub fn set_root_password() -> std::io::Result<()> {
+    if let Some(mut seg_mgmt) = load_segments_info()? {
+        if seg_mgmt.is_root_password_set()? {
+            println!("Root password already set!");
+            if !console::confirm("Do you want to change the root password?") {
+                return Ok(());
+            }
+        }
+
+        let root_password = if let Some(root_password) = console::get_password(false, true, Some("Root Password".to_string())) {
+            root_password
+        } else {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Root password is required!"));
+        };
+    
+        let password = console::get_password(false, true, Some("Password".to_string()));
+        let password = if let Some(password) = password {
+            password
+        } else {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Password is required!"));
+        };
+    
+        let encrypted_root_password = encrypt(root_password.as_bytes(), password.as_bytes())
+            .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?;
+        
+        seg_mgmt.set_root_password(&encrypted_root_password)?;
+    }
+    Ok(())
+}
+
+pub fn reset_root_password() -> std::io::Result<()> {
+    if let Some(mut seg_mgmt) = load_segments_info()? {
+        if !seg_mgmt.is_root_password_set()? {
+            println!("Root password not set!");
+            return Ok(());
+        }
+        if !console::confirm("Are you sure you want to remove the root password?") {
+            return Ok(());
+        }
+        seg_mgmt.reset_root_password()?;
+        println!("Root password removed!");
+    }
     Ok(())
 }
 
@@ -33,7 +78,7 @@ pub fn print_segments_info() -> std::io::Result<()> {
         let segs = seg_mgmt.get_segments_info();
         if !segs.is_empty() {
             let password = if segs.iter().any(|seg| seg.data_type == DataType::Encrypted) {
-                console::get_password(true)
+                get_password(&mut seg_mgmt, true, false)?
             } else {
                 None
             };
@@ -46,15 +91,15 @@ pub fn print_segments_info() -> std::io::Result<()> {
 }
 
 pub fn set_segment(name: &str, data: &str) -> std::io::Result<()> {
-    let password = console::get_password(true);
-    let (data, data_type) = if let Some(password) = &password {
-        (encrypt(data.as_bytes(), password.as_bytes())
-            .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?,
-            DataType::Encrypted)
-    } else {
-        (data.as_bytes().to_vec(), DataType::Plain)
-    };
     if let Some(mut seg_mgmt) = load_segments_info()? {
+        let password = get_password(&mut seg_mgmt, true, false)?;
+        let (data, data_type) = if let Some(password) = &password {
+            (encrypt(data.as_bytes(), password.as_bytes())
+                .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?,
+                DataType::Encrypted)
+        } else {
+            (data.as_bytes().to_vec(), DataType::Plain)
+        };
         let seg = seg_mgmt.set_segment(name, &data, data_type).map(|seg| seg.cloned())?;
         if let Some(seg) = seg {
             print_segments(&mut seg_mgmt, vec![seg], password.as_ref(), PrintType::Set)?;
@@ -71,7 +116,7 @@ pub fn get_segment(name: &str) -> std::io::Result<Option<String>> {
     if let Some(mut seg_mgmt) = load_segments_info()? {
         if let Some(seg) = seg_mgmt.find_segment_by_name(name).cloned() {
             if seg.data_type == DataType::Encrypted {
-                let password = console::get_password(false);
+                let password = get_password(&mut seg_mgmt, true, false)?;
                 if let Some(password) = password {
                     print_segments(&mut seg_mgmt, vec![seg.clone()], Some(&password), PrintType::Get)?;
                     let data = seg_mgmt.read_segment_data(&seg)?;
@@ -123,7 +168,7 @@ pub fn optimize() -> std::io::Result<()> {
 
 pub fn export(file_name: &str) -> std::io::Result<()> {
     if let Some(mut seg_mgmt) = load_segments_info()? {
-        let password = console::get_password(true);
+        let password = get_password(&mut seg_mgmt, true, false)?;
         let segs = seg_mgmt.get_segments_info();
         export_to_file(&mut seg_mgmt, segs, file_name, password.as_ref())?;
         println!("Data exported to '{}'", file_name);
@@ -133,7 +178,7 @@ pub fn export(file_name: &str) -> std::io::Result<()> {
 
 pub fn import(file_name: &str) -> std::io::Result<()> {
     if let Some(mut seg_mgmt) = load_segments_info()? {
-        let password = console::get_password(true);
+        let password = get_password(&mut seg_mgmt, true, false)?;
         import_from_file(&mut seg_mgmt, file_name, password.as_ref())?;
         println!("Data imported from '{}'", file_name);
     }

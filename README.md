@@ -32,6 +32,10 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi import / m [--password / -p] <file_name>`: Import data from a file with encryption option. Allows the user to load data from an external file to the device.
 
+- `svpi set-password / sp`: Set root password. Allows the user to set a password 2-level encryption for the device.
+
+- `svpi reset-password / rp`: Reset root password. Allows the user to reset the password 2-level encryption for the device.
+
 - `svpi check`: Check if the device supports SRWP protocol. Useful for verifying the device's compatibility with the SVPI software.
 
 - `svpi version / v`: Displays the current version of the SVPI software. Useful for checking the software version and ensuring it is up to date.
@@ -40,11 +44,13 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 ## Flags
 
-- `svpi <command> [--flags...] <data>`: How to use flags
+- `svpi <command> [flags...] [params...]`: How to use flags
 
-- `svpi list/set --password / -p ...`: Use password for encryption/decryption
+- `svpi list/set --password / -p`: Use password for encryption/decryption
 
-- `svpi set --password2 / -p2 ...`: Use password with confirmation for encryption
+- `svpi set --password2 / -p2`: Use password with confirmation for encryption
+
+- `svpi set --root-encrypt / -re`: Use root password for encryption/decryption
 
 - `svpi set/get --clipboard / -c`: Copy data to/from clipboard
 
@@ -52,7 +58,7 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 ## Export/Import Format
 
-Text file list of data with the following format:
+### Text file list of data with the following format:
 
 - Plain data:
 ```plaintext
@@ -63,6 +69,22 @@ Text file list of data with the following format:
 ```plaintext
 @<name>: base64(encrypted(data))
 ```
+
+### How can this be used?
+
+This can be useful for transferring data between devices, backing up, or securely migrating data between software versions.
+
+## Root Password Encryption
+
+The root password is stored on the device in an encrypted form using the main password, allowing it to be used for encrypting data without concerns about leakage.
+
+### How it Works:
+
+The root password is used to encrypt data, while the main password encrypts the root password. The root password can be long and inconvenient to enter but reliable, whereas the main password can be short and simple for everyday use.
+
+### Why This is Needed:
+
+You can use the root password for encrypting data without worrying about accidentally revealing it and compromising your data. For example, if someone steals your encrypted data, like a backup, they won't be able to decrypt it even if they discover your main password, because the data is encrypted with the root password. If you've misplaced the main password used to encrypt the root password, you can safely change the main password without worrying about the security of your data. Additionally, you don't need to worry if you lose the device, as the root password is encrypted with the main password.
 
 ## Data Storage Architecture
 
