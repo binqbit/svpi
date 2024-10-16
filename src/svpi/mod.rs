@@ -61,6 +61,31 @@ pub fn reset_root_password() -> std::io::Result<()> {
     Ok(())
 }
 
+pub fn get_root_password() -> std::io::Result<Option<String>> {
+    if let Some(mut seg_mgmt) = load_segments_info()? {
+        if seg_mgmt.is_root_password_set()? {
+            let password = console::get_password(false, true, Some("Password".to_string()));
+            let password = if let Some(password) = password {
+                password
+            } else {
+                return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Password is required!"));
+            };
+            let encrypted_root_password = seg_mgmt.get_root_password()?;
+            let root_password = decrypt(&encrypted_root_password, password.as_bytes())
+                .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?;
+            let root_password = String::from_utf8_lossy(root_password.as_slice()).into_owned();
+            let is_view = args::get_flag(vec!["--view", "-v"]).is_some() || args::get_flag(vec!["--clipboard", "-c"]).is_none();
+            if is_view {
+                println!("Root password: {}", root_password);
+            }
+            return Ok(Some(root_password));
+        } else {
+            println!("Root password not set!");
+        }
+    }
+    Ok(None)
+}
+
 pub fn format_data() -> std::io::Result<()> {
     if let Some(mut seg_mgmt) = load_segments_info()? {
         if !console::confirm("Are you sure you want to format the data?") {

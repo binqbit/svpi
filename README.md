@@ -36,6 +36,8 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi reset-password / rp`: Reset root password. Allows the user to reset the password 2-level encryption for the device.
 
+- `svpi get-password / gp`: Get root password. Allows the user to get the root password, if you forget the root password.
+
 - `svpi check`: Check if the device supports SRWP protocol. Useful for verifying the device's compatibility with the SVPI software.
 
 - `svpi version / v`: Displays the current version of the SVPI software. Useful for checking the software version and ensuring it is up to date.
@@ -78,6 +80,15 @@ This can be useful for transferring data between devices, backing up, or securel
 
 The root password is stored on the device in an encrypted form using the main password, allowing it to be used for encrypting data without concerns about leakage.
 
+### Decrypt All Data And Encrypt With New Password
+
+```shell
+# [-re] - if you want to use the root password for encryption/decryption
+svpi export -p [-re] <file_name>
+svpi import -p [-re] <file_name>
+rm <file_name>
+```
+
 ### How it Works?
 
 The root password is used to encrypt data, while the main password encrypts the root password. The root password can be long and inconvenient to enter but reliable, whereas the main password can be short and simple for everyday use.
@@ -85,6 +96,12 @@ The root password is used to encrypt data, while the main password encrypts the 
 ### Why This is Needed?
 
 You can use the root password for encrypting data without worrying about accidentally revealing it and compromising your data. For example, if someone steals your encrypted data, like a backup, they won't be able to decrypt it even if they discover your main password, because the data is encrypted with the root password. If you've misplaced the main password used to encrypt the root password, you can safely change the main password without worrying about the security of your data. Additionally, you don't need to worry if you lose the device, as the root password is encrypted with the main password.
+
+### Note
+
+- If you suspect that your data has been copied from the device, change the root and main passwords to protect your data.
+- If you forget the main password, you can reset it by overwriting the root password with a new main password.
+- Since all data is encrypted using the root password, if it is lost, you risk losing all data.
 
 ## Data Storage Architecture
 

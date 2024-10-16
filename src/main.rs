@@ -37,6 +37,8 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi reset-password / rp", "Reset root password");
     println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi get-password / gp", "Get root password");
+    println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi check", "Check if the device supports SRWP protocol");
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi version / v", "Print the version of the application");
@@ -118,6 +120,17 @@ fn main() -> std::io::Result<()> {
                 },
                 "reset-password" | "rp" => {
                     svpi::reset_root_password()?;
+                },
+                "get-password" | "gp" => {
+                    let password = svpi::get_root_password()?;
+                    if let Some(password) = password {
+                        let clipboard = args::get_flag(vec!["--clipboard", "-c"]);
+                        if clipboard.is_some() {
+                            let mut clipboard = Clipboard::new().expect("Failed to create clipboard instance!");
+                            clipboard.set_text(password).expect("Failed to set text to clipboard!");
+                            println!("Password copied to clipboard!");
+                        }
+                    }
                 },
                 "check" => {
                     let mut spdm = SerialPortDataManager::find_device();
