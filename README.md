@@ -58,7 +58,7 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 ## Export/Import Format
 
-### Text file list of data with the following format:
+### Text file list of data with the following format
 
 - Plain data:
 ```plaintext
@@ -78,11 +78,11 @@ This can be useful for transferring data between devices, backing up, or securel
 
 The root password is stored on the device in an encrypted form using the main password, allowing it to be used for encrypting data without concerns about leakage.
 
-### How it Works:
+### How it Works?
 
 The root password is used to encrypt data, while the main password encrypts the root password. The root password can be long and inconvenient to enter but reliable, whereas the main password can be short and simple for everyday use.
 
-### Why This is Needed:
+### Why This is Needed?
 
 You can use the root password for encrypting data without worrying about accidentally revealing it and compromising your data. For example, if someone steals your encrypted data, like a backup, they won't be able to decrypt it even if they discover your main password, because the data is encrypted with the root password. If you've misplaced the main password used to encrypt the root password, you can safely change the main password without worrying about the security of your data. Additionally, you don't need to worry if you lose the device, as the root password is encrypted with the main password.
 
@@ -90,7 +90,7 @@ You can use the root password for encrypting data without worrying about acciden
 
 SVPI uses a carefully designed segment architecture for managing and storing data on the Blaustahl device. This structure allows for efficient organization of information, ensuring quick access and ease of management.
 
-### Data Storage Format:
+### Data Storage Format
 
 1. Data Initialization (INIT_SEGMENTS_DATA):
    - `"\0<INIT_SEGMENTS_DATA>\0"`: Marker for the start of segment initialization data.
@@ -113,6 +113,6 @@ SVPI uses a carefully designed segment architecture for managing and storing dat
      - Name (32 bytes): A string identifying the segment allowing the user to easily locate and manage it.
    - `<number of segments> (4 bytes):` A number indicating the total number of segments stored on the device. Located directly before the segment metadata and occupies 4 bytes.
 
-### Why This Structure is Needed:
+### Why This Structure is Needed?
 
 This architecture provides a clear organization of data on the device, allowing for easy addition, extraction, and deletion of information. Initialization markers help verify data integrity, while segment metadata ensures ease of management and memory optimization. This storage method effectively utilizes available space and minimizes fragmentation, thereby increasing the device's performance.
