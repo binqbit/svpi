@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate::{seg_mgmt::{DataType, Segment, SegmentManager}, spdm::SerialPortDataManager, utils::crypto::{decrypt, encrypt}};
+use crate::{seg_mgmt::{DataType, Segment, SegmentManager}, spdm::SerialPortDataManager, utils::{args, crypto::{decrypt, encrypt}}};
 
 
 pub fn load_segments_info() -> std::io::Result<Option<SegmentManager>> {
@@ -34,13 +34,27 @@ pub fn print_memory_state(seg_mgmt: &SegmentManager, optimized_size: Option<u32>
     }
 }
 
-pub fn print_segments(seg_mgmt: &mut SegmentManager, seg: Vec<Segment>, password: Option<&String>) -> std::io::Result<()> {
+pub enum PrintType {
+    List,
+    Get,
+    Set,
+    Remove,
+}
+
+pub fn print_segments(seg_mgmt: &mut SegmentManager, seg: Vec<Segment>, password: Option<&String>, print_type: PrintType) -> std::io::Result<()> {
+    let is_view = args::get_flag(vec!["--view", "-v"]).is_some() ||
+        match print_type {
+            PrintType::List => false,
+            PrintType::Get => args::get_flag(vec!["--clipboard", "-c"]).is_none(),
+            PrintType::Set => false,
+            PrintType::Remove => false,
+        };
     println!("{}", "=".repeat(112));
     println!("| {:32} | {:20} | {:50} |", "Name", "Data Type", "Data");
     println!("{}", "=".repeat(112));
     for seg in seg.iter() {
-        let data = seg_mgmt.read_segment_data(seg)?;
         let (data_type, data) = if seg.data_type == DataType::Encrypted {
+            let data = seg_mgmt.read_segment_data(seg)?;
             if let Some(password) = password {
                 match decrypt(&data, password.as_bytes()) {
                     Ok(data) => {
@@ -53,9 +67,13 @@ pub fn print_segments(seg_mgmt: &mut SegmentManager, seg: Vec<Segment>, password
                 ("Encrypted", format!("{} bytes", seg.size))
             }
         } else {
-            let data = seg_mgmt.read_segment_data(seg)?;
-            let data = String::from_utf8_lossy(data.as_slice()).into_owned();
-            ("Plain", data)
+            if is_view {
+                let data = seg_mgmt.read_segment_data(seg)?;
+                let data = String::from_utf8_lossy(data.as_slice()).into_owned();
+                ("Plain", data)
+            } else {
+                ("Plain", format!("{} bytes", seg.size))
+            }
         };
         println!("| {:32} | {:20} | {:50} |", seg.get_name(), data_type, data);
         println!("{}", "-".repeat(112));

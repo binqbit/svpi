@@ -48,6 +48,8 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi set/get --clipboard / -c`: Copy data to/from clipboard
 
+- `svpi --view / -v`: View the data in the terminal
+
 ## Export/Import Format
 
 Text file list of data with the following format:

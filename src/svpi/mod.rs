@@ -28,11 +28,19 @@ pub fn format_data() -> std::io::Result<()> {
 }
 
 pub fn print_segments_info() -> std::io::Result<()> {
-    let password = console::get_password(true);
     if let Some(mut seg_mgmt) = load_segments_info()? {
         print_memory_state(&seg_mgmt, None);
         let segs = seg_mgmt.get_segments_info();
-        print_segments(&mut seg_mgmt, segs, password.as_ref())?;
+        if !segs.is_empty() {
+            let password = if segs.iter().any(|seg| seg.data_type == DataType::Encrypted) {
+                console::get_password(true)
+            } else {
+                None
+            };
+            print_segments(&mut seg_mgmt, segs, password.as_ref(), PrintType::List)?;
+        } else {
+            println!("No data found!");
+        }
     }
     Ok(())
 }
@@ -49,7 +57,7 @@ pub fn set_segment(name: &str, data: &str) -> std::io::Result<()> {
     if let Some(mut seg_mgmt) = load_segments_info()? {
         let seg = seg_mgmt.set_segment(name, &data, data_type).map(|seg| seg.cloned())?;
         if let Some(seg) = seg {
-            print_segments(&mut seg_mgmt, vec![seg], password.as_ref())?;
+            print_segments(&mut seg_mgmt, vec![seg], password.as_ref(), PrintType::Set)?;
             println!("Data '{}' saved!", name);
         } else {
             println!("Not enough memory!");
@@ -62,17 +70,17 @@ pub fn set_segment(name: &str, data: &str) -> std::io::Result<()> {
 pub fn get_segment(name: &str) -> std::io::Result<Option<String>> {
     if let Some(mut seg_mgmt) = load_segments_info()? {
         if let Some(seg) = seg_mgmt.find_segment_by_name(name).cloned() {
-            print_segments(&mut seg_mgmt, vec![seg.clone()], None)?;
             if seg.data_type == DataType::Encrypted {
                 let password = console::get_password(false);
                 if let Some(password) = password {
-                    print_segments(&mut seg_mgmt, vec![seg.clone()], Some(&password))?;
+                    print_segments(&mut seg_mgmt, vec![seg.clone()], Some(&password), PrintType::Get)?;
                     let data = seg_mgmt.read_segment_data(&seg)?;
                     let data = decrypt(&data, password.as_bytes())
                         .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?;
                     return Ok(Some(String::from_utf8_lossy(data.as_slice()).into_owned()));
                 }
             } else {
+                print_segments(&mut seg_mgmt, vec![seg.clone()], None, PrintType::Get)?;
                 let data = seg_mgmt.read_segment_data(&seg)?;
                 return Ok(Some(String::from_utf8_lossy(data.as_slice()).into_owned()));
             }
@@ -87,7 +95,7 @@ pub fn remove_segment(name: &str) -> std::io::Result<()> {
     if let Some(mut seg_mgmt) = load_segments_info()? {
         let seg = seg_mgmt.find_segment_by_name(name).cloned();
         if let Some(seg) = seg {
-            print_segments(&mut seg_mgmt, vec![seg.clone()], None)?;
+            print_segments(&mut seg_mgmt, vec![seg.clone()], None, PrintType::Remove)?;
             if !console::confirm(&format!("Are you sure you want to remove '{}'?", name)) {
                 return Ok(());
             }

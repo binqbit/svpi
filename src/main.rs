@@ -51,6 +51,8 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi set/get --clipboard / -c", "Copy data to/from clipboard");
     println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi --view / -v", "View the data in the terminal");
+    println!("{}", "-".repeat(107));
 }
 
 fn main() -> std::io::Result<()> {
