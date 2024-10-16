@@ -52,3 +52,5 @@ impl SerialPortDataManager {
 
 mod device;
 mod srwp;
+
+pub use device::*;

@@ -1,23 +1,34 @@
 use std::io::Write;
 
-use crate::{seg_mgmt::{DataType, Segment, SegmentManager}, spdm::SerialPortDataManager, utils::{args, console, crypto::{decrypt, encrypt}}};
+use crate::{seg_mgmt::{DataType, Segment, SegmentManager}, spdm::{self, SerialPortDataManager}, utils::{args, console, crypto::{decrypt, encrypt}}};
 
 
 pub fn load_segments_info() -> std::io::Result<Option<SegmentManager>> {
-    let spdm = SerialPortDataManager::find_device();
-    let mut seg_mgmt = spdm.into_segment_manager();
-    if seg_mgmt.load_segments()? {
-        Ok(Some(seg_mgmt))
-    } else {
+    let mut seg_mgmt = match SerialPortDataManager::find_device() {
+        Ok(spdm) => spdm.into_segment_manager(),
+        Err(err) => return Err(err.to_std_err()),
+    };
+
+    if !seg_mgmt.check_init_data()? {
         println!("Device not initialized!");
         println!("Please run the init command: svpi init <memory_size>");
-        Ok(None)
+        return Ok(None);
     }
+
+    if !seg_mgmt.check_architecture_version()? {
+        println!("Device architecture version mismatch!");
+        println!("Please migrate the data from the old software version.");
+        return Ok(None);
+    }
+
+    seg_mgmt.load_segments()?;
+
+    Ok(Some(seg_mgmt))
 }
 
-pub fn get_segment_manager() -> std::io::Result<SegmentManager> {
-    let spdm = SerialPortDataManager::find_device();
-    Ok(spdm.into_segment_manager())
+pub fn get_segment_manager() -> Result<SegmentManager, spdm::Error> {
+    SerialPortDataManager::find_device()
+        .map(|spdm| spdm.into_segment_manager())
 }
 
 pub fn get_password(seg_mgmt: &mut SegmentManager, check_flag: bool, confirm: bool) -> std::io::Result<Option<String>> {

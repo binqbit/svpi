@@ -5,9 +5,11 @@ pub const SEGMENT_SIZE: u32 = std::mem::size_of::<RawSegmentInfo>() as u32;
 pub const START_INIT_DATA: &[u8] = b"\0<INIT_SEGMENTS_DATA>\0";
 pub const END_INIT_DATA: &[u8] = b"\0</INIT_SEGMENTS_DATA>\0";
 pub const ROOT_PASSWORD_SIZE: u32 = 128;
+pub const ARCHITECTURE_VERSION: u32 = 3;
 
 pub struct SegmentManager {
     spdm: SerialPortDataManager,
+    pub version: u32,
     pub memory_size: u32,
     pub segments: Vec<Segment>,
 }
@@ -32,6 +34,7 @@ impl SerialPortDataManager {
     pub fn into_segment_manager(self) -> SegmentManager {
         SegmentManager {
             spdm: self,
+            version: 0,
             memory_size: 0,
             segments: Vec::new(),
         }

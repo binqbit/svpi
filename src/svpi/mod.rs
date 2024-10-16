@@ -1,11 +1,11 @@
 mod utils;
-use utils::*;
+pub use utils::*;
 
-use crate::{seg_mgmt::{DataType, SegmentManager}, utils::{args, console, crypto::{decrypt, encrypt}}};
+use crate::{seg_mgmt::DataType, spdm, utils::{args, console, crypto::{decrypt, encrypt}}};
 
 pub fn init_segments(memory_size: u32) -> std::io::Result<()> {
-    let mut seg_mgmt = get_segment_manager()?;
-    if seg_mgmt.get_memory_size()?.is_some() {
+    let mut seg_mgmt = get_segment_manager().map_err(spdm::Error::to_std_err)?;
+    if seg_mgmt.check_init_data()? {
         println!("Device already initialized!");
     }
     if !console::confirm("Are you sure you want to initialize the device?") {

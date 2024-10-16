@@ -5,17 +5,66 @@ mod svpi;
 mod utils;
 
 use arboard::Clipboard;
+use seg_mgmt::ARCHITECTURE_VERSION;
 use spdm::SerialPortDataManager;
 use utils::{args, variables::VERSION};
 
-fn print_help() {
+fn print_info() {
     println!("# Secure Vault Personal Information (SVPI)");
-    println!("# Version: {}", VERSION);
+    println!("{}", "=".repeat(59));
+    println!("| {:32} | {:20} |", "Info", "Value");
+    println!("{}", "=".repeat(59));
+    println!("| {:32} | {:>20} |", "Version", VERSION);
+    println!("{}", "-".repeat(59));
+    println!("| {:32} | {:20} |", "App Architecture Version", ARCHITECTURE_VERSION);
+    println!("{}", "-".repeat(59));
+    match SerialPortDataManager::find_device() {
+        Ok(mut spdm) => {
+            let msg = b"Hello, World!";
+            if spdm.test(msg).map(|data| data != msg).unwrap_or(true) {
+                return;
+            }
+
+            let mut seg_mgmt = spdm.into_segment_manager();
+            if seg_mgmt.check_init_data().map(|check| !check).unwrap_or(true) {
+                println!("Device not initialized!");
+                return;
+            }
+
+            match seg_mgmt.get_version() {
+                Ok(version) => {
+                    println!("| {:32} | {:20} |", "Device Architecture Version", version);
+                    println!("{}", "-".repeat(59));
+                },
+                Err(_) => {
+                    return;
+                }
+            }
+
+            match seg_mgmt.get_memory_size() {
+                Ok(memory_size) => {
+                    println!("| {:32} | {:>20} |", "Device Memory Size", format!("{} bytes", memory_size));
+                    println!("{}", "-".repeat(59));
+                },
+                Err(_) => {
+                    return;
+                }
+            }
+        },
+        Err(spdm::Error::ConnectionError) => {
+            println!("The device is not connected to receive information.");
+        },
+        _ => {},
+    }
+}
+
+fn print_help() {
+    print_info();
 
     println!("{}", "=".repeat(107));
     println!("| {:50} | {:50} |", "Command", "Description");
     println!("{}", "=".repeat(107));
-    println!("| {:50} | {:50} |", "svpi init / i <memory_size>", "Initialize the device for the desired memory architecture");
+    println!("| {:50} | {:50} |", "svpi init / i <memory_size>", "Initialize the device for the desired architecture");
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi format / f", "Format the data in the device");
     println!("{}", "-".repeat(107));
@@ -133,7 +182,7 @@ fn main() -> std::io::Result<()> {
                     }
                 },
                 "check" => {
-                    let mut spdm = SerialPortDataManager::find_device();
+                    let mut spdm = SerialPortDataManager::find_device().map_err(|e| e.to_std_err())?;
                     let msg = b"Hello, World!";
                     let data = spdm.test(msg).expect("Failed to test device!");
                     if data == msg {
@@ -143,7 +192,7 @@ fn main() -> std::io::Result<()> {
                     }
                 },
                 "version" | "v" => {
-                    println!("Secure Vault Personal Information (SVPI) {}", VERSION);
+                    print_info();
                 },
                 "help" | "h" => {
                     print_help();

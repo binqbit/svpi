@@ -14,7 +14,7 @@ To build the SVPI project, execute the provided build scripts for your operating
 
 SVPI supports a number of commands that help users interact with the Blaustahl Storage Device:
 
-- `svpi init / i <memory_size>`: Initializes the device with the specified memory size. This command prepares the device for operation by creating the necessary data architecture.
+- `svpi init / i <memory_size>`: Initialize the device for the desired architecture. This command prepares the device for operation by creating the necessary data architecture.
 
 - `svpi format / f`: Formats all data on the device. Allows the user to clear all saved data if needed.
 
@@ -111,7 +111,9 @@ SVPI uses a carefully designed segment architecture for managing and storing dat
 
 1. Data Initialization (INIT_SEGMENTS_DATA):
    - `"\0<INIT_SEGMENTS_DATA>\0"`: Marker for the start of segment initialization data.
+   - `<version> (4 bytes)`: Four bytes allocated to store the architecture version.
    - `<memory size> (4 bytes)`: Four bytes allocated to store the size of the device's entire memory.
+   - `<root password> (128 bytes)`: 128 bytes allocated to store the root password for the device.
    - `"\0</INIT_SEGMENTS_DATA>\0"`: Marker for the end of segment initialization data.
 
 2. Segment Data:

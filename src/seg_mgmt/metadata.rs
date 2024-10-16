@@ -1,19 +1,39 @@
-use super::{RawSegmentInfo, RecordDirection, Segment, SegmentManager, END_INIT_DATA, START_INIT_DATA};
+use super::{RawSegmentInfo, RecordDirection, Segment, SegmentManager, ARCHITECTURE_VERSION, END_INIT_DATA, START_INIT_DATA};
 
 impl SegmentManager {
-    pub fn get_memory_size(&mut self) -> std::io::Result<Option<u32>> {
-        let start = self.read_data(0, START_INIT_DATA.len() as u32)?;
+    pub fn check_init_data(&mut self) -> std::io::Result<bool> {
+        let start = self.read_data(self.start_init_data_address(), START_INIT_DATA.len() as u32)?;
         if start != START_INIT_DATA {
-            return Ok(None);
+            return Ok(false);
         }
 
-        let end = self.read_data(START_INIT_DATA.len() as u32 + 4, END_INIT_DATA.len() as u32)?;
+        let end = self.read_data(self.end_init_data_address(), END_INIT_DATA.len() as u32)?;
         if end != END_INIT_DATA {
-            return Ok(None);
+            return Ok(false);
         }
 
-        let address = self.read_value::<u32>(START_INIT_DATA.len() as u32)?;
-        Ok(Some(address))
+        Ok(true)
+    }
+
+    pub fn check_architecture_version(&mut self) -> std::io::Result<bool> {
+        let version = self.get_version()?;
+        Ok(version == ARCHITECTURE_VERSION)
+    }
+
+    pub fn get_version(&mut self) -> std::io::Result<u32> {
+        self.read_value(self.version_address())
+    }
+
+    pub fn set_version(&mut self, version: u32) -> std::io::Result<()> {
+        self.write_value(self.version_address(), version)
+    }
+    
+    pub fn get_memory_size(&mut self) -> std::io::Result<u32> {
+        self.read_value(self.memory_size_address())
+    }
+
+    pub fn set_memory_size(&mut self, memory_size: u32) -> std::io::Result<()> {
+        self.write_value(self.memory_size_address(), memory_size)
     }
 
     pub fn get_root_password(&mut self) -> std::io::Result<Vec<u8>> {
@@ -42,27 +62,26 @@ impl SegmentManager {
     }
     
     pub fn init_segments(&mut self, memory_size: u32) -> std::io::Result<()> {
+        self.version = ARCHITECTURE_VERSION;
         self.memory_size = memory_size;
-        self.write_data(0, START_INIT_DATA)?;
-        self.write_value(START_INIT_DATA.len() as u32, self.memory_size)?;
-        self.write_data(START_INIT_DATA.len() as u32 + 4, END_INIT_DATA)?;
+        self.write_data(self.start_init_data_address(), START_INIT_DATA)?;
+        self.write_data(self.end_init_data_address(), END_INIT_DATA)?;
+        self.set_version(ARCHITECTURE_VERSION)?;
+        self.set_memory_size(memory_size)?;
         self.reset_root_password()?;
         let raw_segments: Vec<RawSegmentInfo> = self.segments.iter().map(Segment::to_raw).collect();
         self.write_values(self.segments_info_address(), &raw_segments, RecordDirection::Left)
     }
 
-    pub fn load_segments(&mut self) -> std::io::Result<bool> {
-        if let Some(memory_size) = self.get_memory_size()? {
-            self.memory_size = memory_size;
-            let raw_segments = self.read_values::<RawSegmentInfo>(self.segments_info_address(), RecordDirection::Left)?;
-            self.segments.clear();
-            for (i, segment) in raw_segments.into_iter().rev().enumerate() {
-                self.segments.insert(0, Segment::from_raw(i as u32, segment));
-            }
-            Ok(true)
-        } else {
-            Ok(false)
+    pub fn load_segments(&mut self) -> std::io::Result<()> {
+        self.version = self.get_version()?;
+        self.memory_size = self.get_memory_size()?;
+        let raw_segments = self.read_values::<RawSegmentInfo>(self.segments_info_address(), RecordDirection::Left)?;
+        self.segments.clear();
+        for (i, segment) in raw_segments.into_iter().rev().enumerate() {
+            self.segments.insert(0, Segment::from_raw(i as u32, segment));
         }
+        Ok(())
     }
 
     pub fn format_data(&mut self) -> std::io::Result<()> {
