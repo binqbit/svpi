@@ -44,19 +44,23 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi` or `svpi help / h`: Displays a list of available commands and their descriptions. Useful for quickly checking available functionality.
 
+- `svpi api`: Start the API server. Allows developers to integrate SVPI into their software.
+
 ## Flags
 
-- `svpi <command> [flags...] [params...]`: How to use flags
+- `svpi <command> [flags...] [params...]`: How to use flags.
 
-- `svpi list/set --password / -p`: Use password for encryption/decryption
+- `svpi list/set --password / -p`: Use password for encryption/decryption.
 
-- `svpi set --password2 / -p2`: Use password with confirmation for encryption
+- `svpi set --password2 / -p2`: Use password with confirmation for encryption.
 
-- `svpi set --root-encrypt / -re`: Use root password for encryption/decryption
+- `svpi set --root-encrypt / -re`: Use root password for encryption/decryption.
 
-- `svpi set/get --clipboard / -c`: Copy data to/from clipboard
+- `svpi set/get --clipboard / -c`: Copy data to/from clipboard.
 
-- `svpi --view / -v`: View the data in the terminal
+- `svpi --view / -v`: View the data in the terminal.
+
+- `svpi api --auto-exit / -ae`: Automatically exit the API server after device disconnection.
 
 ## Export/Import Format
 

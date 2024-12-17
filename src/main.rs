@@ -95,6 +95,8 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi help / h", "Print this help message");
     println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi api", "Start the API server");
+    println!("{}", "-".repeat(107));
     
     println!("{}", "=".repeat(107));
     println!("| {:50} | {:50} |", "Flags", "Description");
@@ -110,6 +112,8 @@ fn print_help() {
     println!("| {:50} | {:50} |", "svpi set/get --clipboard / -c", "Copy data to/from clipboard");
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi --view / -v", "View the data in the terminal");
+    println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi api --auto-exit / -ae", "Automatically exit the API server after device disconnection");
     println!("{}", "-".repeat(107));
 }
 

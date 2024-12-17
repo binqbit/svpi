@@ -1,13 +1,16 @@
-use rocket::{get, response::content::RawJson};
+
+use std::sync::{Arc, RwLock};
+
+use rocket::{get, response::content::RawJson, State};
 use serde_json::{json, Value};
 
-use crate::api::seg_mgmt::DeviceStatus;
+use crate::api::seg_mgmt::{DeviceStatus, RefDeviceStatus};
 
 #[get("/status")]
-pub fn status() -> RawJson<Value> {
-    let seg_mgmt = DeviceStatus::connect_device();
-    match seg_mgmt {
-        DeviceStatus::Some(mut seg_mgmt) => {
+pub fn status(seg_mgmt: &State<Arc<RwLock<DeviceStatus>>>) -> RawJson<Value> {
+    let mut seg_mgmt = seg_mgmt.inner().write().expect("Failed to lock segment manager");
+    match seg_mgmt.as_mut_ref() {
+        RefDeviceStatus::Some(seg_mgmt) => {
             let version = match seg_mgmt.get_version() {
                 Ok(version) => version,
                 Err(err) => {
@@ -21,11 +24,11 @@ pub fn status() -> RawJson<Value> {
                 "version": version,
             }))
         },
-        DeviceStatus::DeviceNotFound => {
+        RefDeviceStatus::DeviceNotFound => {
             println!("[API::Status] Device not found");
             RawJson(json!({"status": "device_not_found"}))
         },
-        DeviceStatus::DeviceError => {
+        RefDeviceStatus::DeviceError => {
             println!("[API::Status] Device error");
             RawJson(json!({"error": "device_error"}))
         },

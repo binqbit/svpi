@@ -1,6 +1,8 @@
-use rocket::{get, request::{FromRequest, Outcome, Request}, response::content::RawJson};
+use std::sync::{Arc, RwLock};
+
+use rocket::{get, request::{FromRequest, Outcome, Request}, response::content::RawJson, State};
 use serde_json::{json, Value};
-use crate::{api::seg_mgmt::DeviceStatus, seg_mgmt::DataType, svpi::get_password_for_decode, utils::crypto::decrypt};
+use crate::{api::seg_mgmt::{DeviceStatus, RefDeviceStatus}, seg_mgmt::DataType, svpi::get_password_for_decode, utils::crypto::decrypt};
 
 pub struct GetQueryParams {
     name: String,
@@ -21,12 +23,12 @@ impl<'r> FromRequest<'r> for GetQueryParams {
 }
 
 #[get("/get")]
-pub fn get_data(params: GetQueryParams) -> RawJson<Value> {
-    let seg_mgmt = DeviceStatus::connect_device();
-    match seg_mgmt {
-        DeviceStatus::Some(mut seg_mgmt) => {
+pub fn get_data(seg_mgmt: &State<Arc<RwLock<DeviceStatus>>>, params: GetQueryParams) -> RawJson<Value> {
+    let mut seg_mgmt = seg_mgmt.inner().write().expect("Failed to lock segment manager");
+    match seg_mgmt.as_mut_ref() {
+        RefDeviceStatus::Some(seg_mgmt) => {
             let res = match &params.password {
-                Some(password) => get_password_for_decode(&mut seg_mgmt, password, params.use_root_password.unwrap_or(false)),
+                Some(password) => get_password_for_decode(seg_mgmt, password, params.use_root_password.unwrap_or(false)),
                 None => Ok(None),
             };
             match res {
@@ -74,11 +76,11 @@ pub fn get_data(params: GetQueryParams) -> RawJson<Value> {
                 }
             }
         },
-        DeviceStatus::DeviceNotFound => {
+        RefDeviceStatus::DeviceNotFound => {
             println!("[API::Get] Device not found");
             RawJson(json!({"error": "device_not_found"}))
         },
-        DeviceStatus::DeviceError => {
+        RefDeviceStatus::DeviceError => {
             println!("[API::Get] Error loading segments");
             RawJson(json!({"error": "device_error"}))
         },

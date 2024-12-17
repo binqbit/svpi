@@ -12,7 +12,8 @@ const MAX_TIME_PER_TRANSACTION: u64 = 1000 * MAX_BYTES_PER_TRANSACTION as u64 / 
 
 impl SerialPortDataManager {
     pub fn test(&mut self, data: &[u8]) -> std::io::Result<Vec<u8>> {
-        self.clear()?;
+        let serial_port = self.get_serial_port();
+        serial_port.clear()?;
 
         let mut buffer = vec![0u8; 6 + data.len()];
         buffer[0] = SRWP_CMD;
@@ -20,20 +21,21 @@ impl SerialPortDataManager {
         buffer[2..6].copy_from_slice(&(data.len() as u32).to_le_bytes());
         buffer[6..].copy_from_slice(data);
 
-        self.write_data_terminal_ready(true)?;
-        self.write_request_to_send(true)?;
-        self.write(&buffer)?;
-        self.flush()?;
-        self.write_request_to_send(false)?;
-        self.write_data_terminal_ready(false)?;
+        serial_port.write_data_terminal_ready(true)?;
+        serial_port.write_request_to_send(true)?;
+        serial_port.write(&buffer)?;
+        serial_port.flush()?;
+        serial_port.write_request_to_send(false)?;
+        serial_port.write_data_terminal_ready(false)?;
 
         let mut data = vec![0u8; data.len()];
-        self.read(&mut data)?;
+        serial_port.read(&mut data)?;
         Ok(data)
     }
 
     fn _read_data(&mut self, address: u32, length: u32) -> std::io::Result<Vec<u8>> {
-        self.clear()?;
+        let serial_port = self.get_serial_port();
+        serial_port.clear()?;
 
         let mut buffer = vec![0u8; 10];
         buffer[0] = SRWP_CMD;
@@ -41,25 +43,26 @@ impl SerialPortDataManager {
         buffer[2..6].copy_from_slice(&address.to_le_bytes());
         buffer[6..10].copy_from_slice(&length.to_le_bytes());
 
-        self.write_data_terminal_ready(true)?;
-        self.write_request_to_send(true)?;
-        self.write(&buffer)?;
-        self.flush()?;
-        self.write_request_to_send(false)?;
-        self.write_data_terminal_ready(false)?;
+        serial_port.write_data_terminal_ready(true)?;
+        serial_port.write_request_to_send(true)?;
+        serial_port.write(&buffer)?;
+        serial_port.flush()?;
+        serial_port.write_request_to_send(false)?;
+        serial_port.write_data_terminal_ready(false)?;
 
-        self.read_data_set_ready()?;
+        serial_port.read_data_set_ready()?;
         let mut count = 0u32;
         let mut data = vec![0u8; length as usize];
         while count < data.len() as u32 {
-            let size = self.read(&mut data[count as usize..])?;
+            let size = serial_port.read(&mut data[count as usize..])?;
             count += size as u32;
         }
         Ok(data)
     }
 
     fn _write_data(&mut self, address: u32, data: &[u8]) -> std::io::Result<()> {
-        self.clear()?;
+        let serial_port = self.get_serial_port();
+        serial_port.clear()?;
 
         let mut buffer = vec![0u8; 10 + data.len()];
         buffer[0] = SRWP_CMD;
@@ -68,12 +71,12 @@ impl SerialPortDataManager {
         buffer[6..10].copy_from_slice(&(data.len() as u32).to_le_bytes());
         buffer[10..].copy_from_slice(data);
 
-        self.write_data_terminal_ready(true)?;
-        self.write_request_to_send(true)?;
-        self.write(&buffer)?;
-        self.flush()?;
-        self.write_request_to_send(false)?;
-        self.write_data_terminal_ready(false)?;
+        serial_port.write_data_terminal_ready(true)?;
+        serial_port.write_request_to_send(true)?;
+        serial_port.write(&buffer)?;
+        serial_port.flush()?;
+        serial_port.write_request_to_send(false)?;
+        serial_port.write_data_terminal_ready(false)?;
         Ok(())
     }
 

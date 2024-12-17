@@ -1,8 +1,12 @@
+use std::sync::Mutex;
+
 use serialport::{ClearBuffer, DataBits, FlowControl, Parity, SerialPort, StopBits};
 
-pub struct SerialPortDataManager {
+pub struct SerialPortBox {
     port: Box<dyn SerialPort>,
 }
+
+pub struct SerialPortDataManager(Mutex<SerialPortBox>);
 
 impl SerialPortDataManager {
     pub fn new(path: &str) -> std::io::Result<Self> {
@@ -12,9 +16,15 @@ impl SerialPortDataManager {
             .flow_control(FlowControl::None)
             .parity(Parity::None)
             .open()?;
-        Ok(SerialPortDataManager { port })
+        Ok(SerialPortDataManager(Mutex::new(SerialPortBox { port })))
     }
 
+    pub fn get_serial_port(&mut self) -> &mut SerialPortBox {
+        self.0.get_mut().expect("Port is locked")
+    }
+}
+
+impl SerialPortBox {
     pub fn read_data_set_ready(&mut self) -> std::io::Result<bool> {
         Ok(self.port.read_data_set_ready()?)
     }
@@ -39,7 +49,7 @@ impl SerialPortDataManager {
         Ok(bytes_read)
     }
 
-    pub fn clear(&self) -> std::io::Result<()> {
+    pub fn clear(&mut self) -> std::io::Result<()> {
         self.port.clear(ClearBuffer::All)?;
         Ok(())
     }

@@ -8,7 +8,7 @@ pub const ROOT_PASSWORD_SIZE: u32 = 128;
 pub const ARCHITECTURE_VERSION: u32 = 3;
 
 pub struct SegmentManager {
-    spdm: SerialPortDataManager,
+    pub spdm: SerialPortDataManager,
     pub version: u32,
     pub memory_size: u32,
     pub segments: Vec<Segment>,
