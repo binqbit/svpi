@@ -1,0 +1,257 @@
+{
+	"info": {
+		"_postman_id": "2c9492d9-812c-49be-a70d-05e6d8a799a2",
+		"name": "API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "21901618"
+	},
+	"item": [
+		{
+			"name": "Status",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3333/status",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3333",
+					"path": [
+						"status"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Get Status",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3333/status",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3333",
+							"path": [
+								"status"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "content-type",
+							"value": "application/json"
+						},
+						{
+							"key": "server",
+							"value": "Rocket"
+						},
+						{
+							"key": "x-frame-options",
+							"value": "SAMEORIGIN"
+						},
+						{
+							"key": "x-content-type-options",
+							"value": "nosniff"
+						},
+						{
+							"key": "permissions-policy",
+							"value": "interest-cohort=()"
+						},
+						{
+							"key": "content-length",
+							"value": "30"
+						},
+						{
+							"key": "date",
+							"value": "Mon, 16 Dec 2024 10:33:01 GMT"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"status\": \"found\",\n    \"version\": 3\n}"
+				}
+			]
+		},
+		{
+			"name": "List",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3333/list",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3333",
+					"path": [
+						"list"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Get Data List",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3333/list",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3333",
+							"path": [
+								"list"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "content-type",
+							"value": "application/json"
+						},
+						{
+							"key": "server",
+							"value": "Rocket"
+						},
+						{
+							"key": "x-frame-options",
+							"value": "SAMEORIGIN"
+						},
+						{
+							"key": "x-content-type-options",
+							"value": "nosniff"
+						},
+						{
+							"key": "permissions-policy",
+							"value": "interest-cohort=()"
+						},
+						{
+							"key": "content-length",
+							"value": "189"
+						},
+						{
+							"key": "date",
+							"value": "Mon, 16 Dec 2024 10:34:08 GMT"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"segments\": [\n        {\n            \"data_type\": \"encrypted\",\n            \"name\": \"data1\",\n            \"size\": 59\n        },\n        {\n            \"data_type\": \"encrypted\",\n            \"name\": \"data2\",\n            \"size\": 123\n        },\n        {\n            \"data_type\": \"encrypted\",\n            \"name\": \"data3\",\n            \"size\": 127\n        }\n    ]\n}"
+				}
+			]
+		},
+		{
+			"name": "Get",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3333/get?name=data_key&password=store_password&use_root_password=true",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3333",
+					"path": [
+						"get"
+					],
+					"query": [
+						{
+							"key": "name",
+							"value": "data_key"
+						},
+						{
+							"key": "password",
+							"value": "store_password"
+						},
+						{
+							"key": "use_root_password",
+							"value": "true"
+						}
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Decode And Get Data",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3333/get?name=data_key&password=store_password&use_root_password=true",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3333",
+							"path": [
+								"get"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "data_key"
+								},
+								{
+									"key": "password",
+									"value": "store_password"
+								},
+								{
+									"key": "use_root_password",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "content-type",
+							"value": "application/json"
+						},
+						{
+							"key": "server",
+							"value": "Rocket"
+						},
+						{
+							"key": "permissions-policy",
+							"value": "interest-cohort=()"
+						},
+						{
+							"key": "x-frame-options",
+							"value": "SAMEORIGIN"
+						},
+						{
+							"key": "x-content-type-options",
+							"value": "nosniff"
+						},
+						{
+							"key": "content-length",
+							"value": "48"
+						},
+						{
+							"key": "date",
+							"value": "Mon, 16 Dec 2024 10:37:59 GMT"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"data\": \"decrypted_data\",\n    \"name\": \"data_key\"\n}"
+				}
+			]
+		}
+	]
+}

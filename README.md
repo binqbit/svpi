@@ -135,3 +135,6 @@ SVPI uses a carefully designed segment architecture for managing and storing dat
 ### Why This Structure is Needed?
 
 This architecture provides a clear organization of data on the device, allowing for easy addition, extraction, and deletion of information. Initialization markers help verify data integrity, while segment metadata ensures ease of management and memory optimization. This storage method effectively utilizes available space and minimizes fragmentation, thereby increasing the device's performance.
+
+### API
+[API](./api/api.md) for developers who want to integrate SVPI into their software.
