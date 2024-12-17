@@ -3,6 +3,7 @@ mod spdm;
 mod seg_mgmt;
 mod svpi;
 mod utils;
+mod api;
 
 use arboard::Clipboard;
 use seg_mgmt::ARCHITECTURE_VERSION;
@@ -112,7 +113,8 @@ fn print_help() {
     println!("{}", "-".repeat(107));
 }
 
-fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
     match args::get_command() {
         Some(cmd) => {
             match cmd.as_str() {
@@ -196,6 +198,9 @@ fn main() -> std::io::Result<()> {
                 },
                 "help" | "h" => {
                     print_help();
+                },
+                "api" => {
+                    api::api_server().launch().await.expect("Failed to start API server!");
                 },
                 _ => {
                     println!("Invalid command!");

@@ -31,18 +31,26 @@ pub fn get_segment_manager() -> Result<SegmentManager, spdm::Error> {
         .map(|spdm| spdm.into_segment_manager())
 }
 
+pub fn get_password_for_decode(seg_mgmt: &mut SegmentManager, password: &str, is_root: bool) -> std::io::Result<Option<String>> {
+    if is_root {
+        if !seg_mgmt.is_root_password_set()? {
+            return Ok(None);
+        } else {
+            let root_password = seg_mgmt.get_root_password()?;
+            let root_password = decrypt(&root_password, password.as_bytes())
+                .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?;
+            return Ok(Some(String::from_utf8_lossy(root_password.as_slice()).into_owned()));
+        }
+    } else {
+        Ok(Some(password.to_string()))
+    }
+}
+
 pub fn get_password(seg_mgmt: &mut SegmentManager, check_flag: bool, confirm: bool) -> std::io::Result<Option<String>> {
     let password = console::get_password(check_flag, confirm, None);
     if let Some(password) = &password {
         if args::get_flag(vec!["--root-encrypt", "-re"]).is_some() {
-            if !seg_mgmt.is_root_password_set()? {
-                return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Root password not set!"));
-            } else {
-                let root_password = seg_mgmt.get_root_password()?;
-                let root_password = decrypt(&root_password, password.as_bytes())
-                    .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!"))?;
-                return Ok(Some(String::from_utf8_lossy(root_password.as_slice()).into_owned()));
-            }
+            return get_password_for_decode(seg_mgmt, password, true);
         }
     }
     Ok(password)

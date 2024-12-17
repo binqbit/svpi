@@ -9,3 +9,10 @@ ring = "0.17.8"
 rpassword = "7.3.1"
 arboard = "3.4.1"
 base64 = "0.22.1"
+
+# For API
+tokio = { version = '1.27.0', features = ["full"] }
+rocket = { version = "0.5.1", features = ["json"] }
+rocket_cors = "0.6.0"
+serde_json = "1.0.85"
+serde = { version = "1.0.196", features = ["derive"] }
