@@ -44,7 +44,9 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi` or `svpi help / h`: Displays a list of available commands and their descriptions. Useful for quickly checking available functionality.
 
-- `svpi api`: Start the API server. Allows developers to integrate SVPI into their software.
+- `svpi api-server`: Start the API server. Allows developers to integrate SVPI into their software.
+
+- `svpi api-chrome`: Start the Chrome app. Allows users to interact with the device through a Chrome extension.
 
 ## Flags
 
@@ -60,7 +62,7 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi --view / -v`: View the data in the terminal.
 
-- `svpi api --auto-exit / -ae`: Automatically exit the API server after device disconnection.
+- `svpi api-server --auto-exit / -ae`: Automatically exit the API server after device disconnection.
 
 ## Export/Import Format
 

@@ -95,7 +95,9 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi help / h", "Print this help message");
     println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi api", "Start the API server");
+    println!("| {:50} | {:50} |", "svpi api-server", "Start the API server");
+    println!("{}", "-".repeat(107));
+    println!("| {:50} | {:50} |", "svpi api-chrome", "Start the Chrome app");
     println!("{}", "-".repeat(107));
     
     println!("{}", "=".repeat(107));
@@ -113,7 +115,7 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi --view / -v", "View the data in the terminal");
     println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi api --auto-exit / -ae", "Automatically exit the API server after device disconnection");
+    println!("| {:50} | {:50} |", "svpi api-server --auto-exit / -ae", "Automatically exit the API server after device disconnection");
     println!("{}", "-".repeat(107));
 }
 
@@ -203,8 +205,11 @@ async fn main() -> std::io::Result<()> {
                 "help" | "h" => {
                     print_help();
                 },
-                "api" => {
-                    api::api_server().launch().await.expect("Failed to start API server!");
+                "api-server" => {
+                    api::server::api_server().launch().await.expect("Failed to start API server!");
+                },
+                "api-chrome" => {
+                    api::chrome::run_chrome_app().expect("Failed to launch Chrome app!");
                 },
                 _ => {
                     println!("Invalid command!");
