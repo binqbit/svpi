@@ -30,7 +30,7 @@ pub fn status(seg_mgmt: &State<Arc<RwLock<DeviceStatus>>>) -> RawJson<Value> {
         },
         RefDeviceStatus::DeviceError => {
             println!("[API::Status] Device error");
-            RawJson(json!({"error": "device_error"}))
+            RawJson(json!({"status": "device_error"}))
         },
     }
 }

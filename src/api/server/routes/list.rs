@@ -24,15 +24,15 @@ pub fn list(seg_mgmt: &State<Arc<RwLock<DeviceStatus>>>) -> RawJson<Value> {
                 })
                 .collect::<Vec<Value>>();
             println!("[API::List] Segments: {}", segments.len());
-            RawJson(json!({"segments": segments}))
+            RawJson(json!({"status": "ok", "segments": segments}))
         },
         RefDeviceStatus::DeviceNotFound => {
             println!("[API::List] Device not found");
-            RawJson(json!({"error": "device_not_found"}))
+            RawJson(json!({"status": "device_not_found"}))
         },
         RefDeviceStatus::DeviceError => {
             println!("[API::List] Error loading segments");
-            RawJson(json!({"error": "device_error"}))
+            RawJson(json!({"status": "device_error"}))
         },
     }
 }
