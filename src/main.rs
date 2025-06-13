@@ -88,6 +88,16 @@ fn print_help() {
         "svpi format / f", "Format the data in the device"
     );
     println!("{}", "-".repeat(107));
+    println!(
+        "| {:50} | {:50} |",
+        "svpi dump / d <file_name>", "Dump the data from the device to a file"
+    );
+    println!("{}", "-".repeat(107));
+    println!(
+        "| {:50} | {:50} |",
+        "svpi load / ld <file_name>", "Load dump data from a file to the device"
+    );
+    println!("{}", "-".repeat(107));
     println!("| {:50} | {:50} |", "svpi list / l", "Print all data list");
     println!("{}", "-".repeat(107));
     println!(
@@ -211,6 +221,14 @@ async fn main() -> std::io::Result<()> {
             }
             "format" | "f" => {
                 svpi::format_data()?;
+            }
+            "dump" | "d" => {
+                let file_name = args::get_param(0).expect("File name is required!");
+                svpi::save_dump(&file_name)?;
+            }
+            "load" | "ld" => {
+                let file_name = args::get_param(0).expect("File name is required!");
+                svpi::load_dump(&file_name)?;
             }
             "list" | "l" => {
                 svpi::print_segments_info()?;

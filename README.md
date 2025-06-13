@@ -18,6 +18,10 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi format / f`: Formats all data on the device. Allows the user to clear all saved data if needed.
 
+- `svpi dump / d <file_name>`: Dump the data from the device to a file. This command allows the user to save all data from the device to an external file for backup or analysis.
+
+- `svpi load / ld <file_name>`: Load dump data from a file to the device. This command allows the user to restore data from an external file to the device.
+
 - `svpi list / l`: Displays a list of all saved data. Useful for quickly viewing available information.
 
 - `svpi set / s <name> <data>`: Saves data on the device. This command allows the user to enter new information into the storage.

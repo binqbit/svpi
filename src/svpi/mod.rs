@@ -243,3 +243,24 @@ pub fn import(file_name: &str) -> std::io::Result<()> {
     }
     Ok(())
 }
+
+pub fn save_dump(file_name: &str) -> std::io::Result<()> {
+    if let Some(mut seg_mgmt) = load_segments_info()? {
+        save_dump_to_file(&mut seg_mgmt, file_name)?;
+        println!("Dump saved to '{}'", file_name);
+    }
+    Ok(())
+}
+
+pub fn load_dump(file_name: &str) -> std::io::Result<()> {
+    let mut seg_mgmt = get_segment_manager().map_err(spdm::Error::to_std_err)?;
+    if seg_mgmt.check_init_data()? {
+        println!("Device already initialized!");
+    }
+    if !console::confirm("Are you sure you want to load the dump?") {
+        return Ok(());
+    }
+    load_dump_from_file(&mut seg_mgmt, file_name)?;
+    println!("Dump loaded!");
+    Ok(())
+}

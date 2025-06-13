@@ -239,3 +239,22 @@ pub fn import_from_file(
     }
     Ok(())
 }
+
+pub fn save_dump_to_file(
+    seg_mgmt: &mut SegmentManager,
+    file_path: &str,
+) -> std::io::Result<()> {
+    let data = seg_mgmt.get_dump()?;
+    let mut file = std::fs::File::create(file_path)?;
+    file.write_all(&data)?;
+    Ok(())
+}
+
+pub fn load_dump_from_file(
+    seg_mgmt: &mut SegmentManager,
+    file_path: &str,
+) -> std::io::Result<()> {
+    let data = std::fs::read(file_path)?;
+    seg_mgmt.set_dump(&data)?;
+    Ok(())
+}

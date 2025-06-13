@@ -110,4 +110,12 @@ impl SegmentManager {
             .cloned()
             .collect()
     }
+
+    pub fn get_dump(&mut self) -> std::io::Result<Vec<u8>> {
+        self.spdm.read_data(self.start_init_data_address(), self.memory_size as u32)
+    }
+
+    pub fn set_dump(&mut self, data: &[u8]) -> std::io::Result<()> {
+        self.spdm.write_data(self.start_init_data_address(), data)
+    }
 }
