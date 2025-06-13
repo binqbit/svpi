@@ -5,7 +5,14 @@ impl Segment {
         let name = name.as_bytes();
         let mut name_buf = [0; 32];
         name_buf[..name.len()].copy_from_slice(name);
-        Segment { index, address, size, data_type, status: true, name: name_buf }
+        Segment {
+            index,
+            address,
+            size,
+            data_type,
+            status: true,
+            name: name_buf,
+        }
     }
 
     pub fn from_raw(index: u32, raw: RawSegmentInfo) -> Segment {
@@ -20,7 +27,13 @@ impl Segment {
     }
 
     pub fn to_raw(&self) -> RawSegmentInfo {
-        (self.address, self.size, self.data_type.clone(), self.status, self.name)
+        (
+            self.address,
+            self.size,
+            self.data_type.clone(),
+            self.status,
+            self.name,
+        )
     }
 
     pub fn set_index(&mut self, index: u32) {
@@ -46,16 +59,29 @@ impl Segment {
     }
 
     pub fn get_name(&self) -> String {
-        String::from_utf8_lossy(&self.name).trim_end_matches(char::from(0)).to_string()
+        String::from_utf8_lossy(&self.name)
+            .trim_end_matches(char::from(0))
+            .to_string()
     }
 }
 
 impl SegmentManager {
-    pub fn set_segment(&mut self, name: &str, data: &[u8], data_type: DataType) -> std::io::Result<Option<&Segment>> {
+    pub fn set_segment(
+        &mut self,
+        name: &str,
+        data: &[u8],
+        data_type: DataType,
+    ) -> std::io::Result<Option<&Segment>> {
         let seg_index = self.find_segment_by_name(name).map(|seg| seg.index);
         let address = self.find_new_segment_address(data.len() as u32);
         if let Some(address) = address {
-            let segment = Segment::new(self.segments.len() as u32, address, data.len() as u32, data_type, name);
+            let segment = Segment::new(
+                self.segments.len() as u32,
+                address,
+                data.len() as u32,
+                data_type,
+                name,
+            );
             self.save_segment_info(&segment)?;
             self.write_segment_data(&segment, data)?;
             self.segments.insert(0, segment);

@@ -8,7 +8,9 @@ pub fn confirm(text: &str) -> bool {
     print!("{} (y/N): ", text);
     std::io::stdout().flush().unwrap();
     let mut confirm = String::new();
-    std::io::stdin().read_line(&mut confirm).expect("Failed to read answer");
+    std::io::stdin()
+        .read_line(&mut confirm)
+        .expect("Failed to read answer");
     confirm.trim() == "y"
 }
 
@@ -23,7 +25,10 @@ pub fn get_password(check_flag: bool, confirm: bool, text: Option<String>) -> Op
             if password.is_empty() {
                 return None;
             }
-            if confirm || password_flag == Some("--password2".to_string()) || password_flag == Some("-p2".to_string()) {
+            if confirm
+                || password_flag == Some("--password2".to_string())
+                || password_flag == Some("-p2".to_string())
+            {
                 print!("Confirm {text}: ");
                 std::io::stdout().flush().unwrap();
                 let confirm_password = read_password().unwrap().trim().to_string();

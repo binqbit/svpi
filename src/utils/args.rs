@@ -1,4 +1,3 @@
-
 pub fn get_command() -> Option<String> {
     std::env::args().nth(1)
 }

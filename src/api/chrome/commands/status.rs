@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::seg_mgmt::SegmentManager;
 use super::Status;
+use crate::seg_mgmt::SegmentManager;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatusResponse {
@@ -14,7 +14,7 @@ pub fn status(seg_mgmt: &mut SegmentManager) -> Result<StatusResponse, Status> {
         Ok(version) => version,
         Err(_) => {
             return Err(Status::DeviceError);
-        },
+        }
     };
     Ok(StatusResponse {
         status: Status::Ok,

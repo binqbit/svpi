@@ -1,4 +1,7 @@
-use std::{thread::sleep, time::{Duration, Instant}};
+use std::{
+    thread::sleep,
+    time::{Duration, Instant},
+};
 
 use crate::spdm::SerialPortDataManager;
 
@@ -8,7 +11,8 @@ const CMD_READ: u8 = 0x01;
 const CMD_WRITE: u8 = 0x02;
 const MAX_BYTES_PER_SECOND: u64 = 9600 / 8;
 const MAX_BYTES_PER_TRANSACTION: u32 = 32;
-const MAX_TIME_PER_TRANSACTION: u64 = 1000 * MAX_BYTES_PER_TRANSACTION as u64 / MAX_BYTES_PER_SECOND;
+const MAX_TIME_PER_TRANSACTION: u64 =
+    1000 * MAX_BYTES_PER_TRANSACTION as u64 / MAX_BYTES_PER_SECOND;
 
 impl SerialPortDataManager {
     pub fn test(&mut self, data: &[u8]) -> std::io::Result<Vec<u8>> {
@@ -102,7 +106,10 @@ impl SerialPortDataManager {
         while count < data.len() as u32 {
             let start_time = Instant::now();
             let size = std::cmp::min(data.len() as u32 - count, MAX_BYTES_PER_TRANSACTION);
-            self._write_data(address + count, &data[count as usize..count as usize + size as usize])?;
+            self._write_data(
+                address + count,
+                &data[count as usize..count as usize + size as usize],
+            )?;
             count += size;
             let elapsed = start_time.elapsed().as_millis() as u64;
             if elapsed < MAX_TIME_PER_TRANSACTION {

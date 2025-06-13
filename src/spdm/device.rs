@@ -12,10 +12,12 @@ impl SerialPortDataManager {
         let available_ports = serialport::available_ports().map_err(|_| Error::DeviceNotFound)?;
         let ports: Vec<String> = available_ports
             .iter()
-            .filter_map(|port| if let SerialPortType::UsbPort(_) = &port.port_type {
-                Some(port)
-            } else {
-                None
+            .filter_map(|port| {
+                if let SerialPortType::UsbPort(_) = &port.port_type {
+                    Some(port)
+                } else {
+                    None
+                }
             })
             .map(|port| port.port_name.clone())
             .collect();
@@ -32,7 +34,9 @@ impl SerialPortDataManager {
 
             println!("Select device:");
             let mut input = String::new();
-            std::io::stdin().read_line(&mut input).expect("Failed to read line");
+            std::io::stdin()
+                .read_line(&mut input)
+                .expect("Failed to read line");
             let index: usize = input.trim().parse().expect("Expected a number of device");
             if index == 0 || index > ports.len() {
                 panic!("Device not found by number");
@@ -49,8 +53,12 @@ impl SerialPortDataManager {
 impl Error {
     pub fn to_std_err(self) -> std::io::Error {
         match self {
-            Error::DeviceNotFound => std::io::Error::new(std::io::ErrorKind::NotFound, "Device not found"),
-            Error::ConnectionError => std::io::Error::new(std::io::ErrorKind::Other, "Connection error"),
+            Error::DeviceNotFound => {
+                std::io::Error::new(std::io::ErrorKind::NotFound, "Device not found")
+            }
+            Error::ConnectionError => {
+                std::io::Error::new(std::io::ErrorKind::Other, "Connection error")
+            }
         }
     }
 }

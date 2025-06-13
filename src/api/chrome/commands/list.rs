@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::seg_mgmt::{DataType, SegmentManager};
 use super::Status;
+use crate::seg_mgmt::{DataType, SegmentManager};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum DataTypeResponse {

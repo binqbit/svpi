@@ -29,6 +29,6 @@ pub enum Status {
     PasswordNotProvided,
 }
 
-pub mod status;
-pub mod list;
 pub mod get_data;
+pub mod list;
+pub mod status;

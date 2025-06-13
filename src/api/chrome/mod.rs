@@ -1,9 +1,9 @@
-use std::io::{self, Read, Write};
 use commands::{get_data, list, status, CommandRequest, Status};
 use serde_json::{from_str, json, to_string, Value};
+use std::io::{self, Read, Write};
 
-use crate::seg_mgmt::SegmentManager;
 use super::seg_mgmt::DeviceStatus;
+use crate::seg_mgmt::SegmentManager;
 
 mod commands;
 
@@ -28,11 +28,16 @@ fn send_message(response: &Value) -> io::Result<()> {
     Ok(())
 }
 
-fn process_command(command: CommandRequest, seg_mgmt: &mut SegmentManager) -> Result<Value, Status> {
+fn process_command(
+    command: CommandRequest,
+    seg_mgmt: &mut SegmentManager,
+) -> Result<Value, Status> {
     Ok(match command {
         CommandRequest::Status {} => serde_json::to_value(status::status(seg_mgmt)?).unwrap(),
         CommandRequest::List {} => serde_json::to_value(list::list(seg_mgmt)?).unwrap(),
-        CommandRequest::GetData(req) => serde_json::to_value(get_data::get_data(req, seg_mgmt)?).unwrap(),
+        CommandRequest::GetData(req) => {
+            serde_json::to_value(get_data::get_data(req, seg_mgmt)?).unwrap()
+        }
     })
 }
 
@@ -40,11 +45,9 @@ pub fn run_chrome_app() -> io::Result<()> {
     let request = read_message()?;
 
     let response = match DeviceStatus::connect_device() {
-        DeviceStatus::Some(mut seg_mgmt) => {
-            match process_command(request, &mut seg_mgmt) {
-                Ok(response) => response,
-                Err(status) => json!({ "status": status }),
-            }
+        DeviceStatus::Some(mut seg_mgmt) => match process_command(request, &mut seg_mgmt) {
+            Ok(response) => response,
+            Err(status) => json!({ "status": status }),
         },
         DeviceStatus::DeviceNotFound => json!({ "status": Status::DeviceNotFound }),
         DeviceStatus::DeviceError => json!({ "status": Status::DeviceError }),

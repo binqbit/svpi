@@ -41,10 +41,10 @@ impl SerialPortDataManager {
     }
 }
 
-mod types;
 mod addresses;
+mod mem_mgmt;
 mod metadata;
 mod segment;
-mod mem_mgmt;
+mod types;
 
 pub use types::*;

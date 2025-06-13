@@ -3,7 +3,10 @@ use std::sync::{Arc, RwLock};
 use rocket::{config::Config, figment::Profile, Build, Rocket};
 use rocket_cors::CorsOptions;
 
-use crate::{api::seg_mgmt::{start_connection_checking, DeviceStatus}, utils::args};
+use crate::{
+    api::seg_mgmt::{start_connection_checking, DeviceStatus},
+    utils::args,
+};
 
 mod routes;
 

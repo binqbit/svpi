@@ -1,4 +1,9 @@
-use std::{process::exit, sync::{Arc, RwLock}, thread, time::Duration};
+use std::{
+    process::exit,
+    sync::{Arc, RwLock},
+    thread,
+    time::Duration,
+};
 
 use crate::{seg_mgmt::SegmentManager, spdm::SerialPortDataManager};
 
@@ -23,7 +28,7 @@ impl DeviceStatus {
                     Ok(_) => DeviceStatus::Some(seg_mgmt),
                     Err(_) => DeviceStatus::DeviceError,
                 }
-            },
+            }
             Err(_) => DeviceStatus::DeviceNotFound,
         }
     }
@@ -39,18 +44,16 @@ impl DeviceStatus {
 
 pub fn start_connection_checking(seg_mgmt: Arc<RwLock<DeviceStatus>>) {
     let seg_mgmt = seg_mgmt.clone();
-    thread::spawn(move || {
-        loop {
-            thread::sleep(Duration::from_secs(1));
-            let mut seg_mgmt = seg_mgmt.write().expect("Failed to lock segment manager");
-            if let RefDeviceStatus::Some(seg_mgmt) = seg_mgmt.as_mut_ref() {
-                if let Ok(res) = seg_mgmt.spdm.test(b"test") {
-                    if res == b"test" {
-                        continue;
-                    }
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_secs(1));
+        let mut seg_mgmt = seg_mgmt.write().expect("Failed to lock segment manager");
+        if let RefDeviceStatus::Some(seg_mgmt) = seg_mgmt.as_mut_ref() {
+            if let Ok(res) = seg_mgmt.spdm.test(b"test") {
+                if res == b"test" {
+                    continue;
                 }
             }
-            exit(1);
         }
+        exit(1);
     });
 }
