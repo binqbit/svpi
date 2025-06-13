@@ -21,7 +21,7 @@ fn print_info() {
         "App Architecture Version", ARCHITECTURE_VERSION
     );
     println!("{}", "-".repeat(59));
-    match SerialPortDataManager::find_device() {
+    match SerialPortDataManager::connect_to_device(true) {
         Ok(mut spdm) => {
             let msg = b"Hello, World!";
             if spdm.test(msg).map(|data| data != msg).unwrap_or(true) {
@@ -62,8 +62,11 @@ fn print_info() {
                 }
             }
         }
-        Err(spdm::Error::ConnectionError) => {
-            println!("The device is not connected to receive information.");
+        Err(spdm::Error::ConnectionError(err)) => {
+            println!(
+                "The device is not connected to receive information: {}",
+                err
+            );
         }
         _ => {}
     }
@@ -103,13 +106,12 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!(
         "| {:50} | {:50} |",
-        "svpi export / e [--password / -p] <file_name>",
-        "Export data to a file with decryption option"
+        "svpi export / e [--password] <file_name>", "Export data to a file with decryption option"
     );
     println!("{}", "-".repeat(107));
     println!(
         "| {:50} | {:50} |",
-        "svpi import / m [--password / -p] <file_name>",
+        "svpi import / m [--password] <file_name>",
         "Import data from a file with encryption option"
     );
     println!("{}", "-".repeat(107));
@@ -164,17 +166,17 @@ fn print_help() {
     println!("{}", "-".repeat(107));
     println!(
         "| {:50} | {:50} |",
-        "svpi list/set --password / -p", "Use password for encryption/decryption"
+        "svpi [op] --password / -p", "Use password for encryption/decryption"
     );
     println!("{}", "-".repeat(107));
     println!(
         "| {:50} | {:50} |",
-        "svpi set --password2 / -p2", "Use password with confirmation for encryption"
+        "svpi set --p2 / -rp2", "Use password with confirmation for encryption"
     );
     println!("{}", "-".repeat(107));
     println!(
         "| {:50} | {:50} |",
-        "svpi set --root-encrypt / -re", "Use root password for encryption/decryption"
+        "svpi set --root-password / -rp", "Use root password for encryption/decryption"
     );
     println!("{}", "-".repeat(107));
     println!(
@@ -278,7 +280,8 @@ async fn main() -> std::io::Result<()> {
                 }
             }
             "check" => {
-                let mut spdm = SerialPortDataManager::find_device().map_err(|e| e.to_std_err())?;
+                let mut spdm =
+                    SerialPortDataManager::connect_to_device(true).map_err(|e| e.to_std_err())?;
                 let msg = b"Hello, World!";
                 let data = spdm.test(msg).expect("Failed to test device!");
                 if data == msg {

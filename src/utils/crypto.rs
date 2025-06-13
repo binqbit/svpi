@@ -7,7 +7,7 @@ use std::num::NonZeroU32;
 const SALT_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
 const KEY_LEN: usize = 32;
-const ITERATIONS: u32 = 100_000;
+const ITERATIONS: u32 = 1_000_000;
 
 fn gen_salt() -> [u8; SALT_LEN] {
     let rng = rand::SystemRandom::new();

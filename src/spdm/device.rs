@@ -4,11 +4,11 @@ use crate::SerialPortDataManager;
 
 pub enum Error {
     DeviceNotFound,
-    ConnectionError,
+    ConnectionError(String),
 }
 
 impl SerialPortDataManager {
-    pub fn find_device() -> Result<SerialPortDataManager, Error> {
+    pub fn connect_to_device(is_console: bool) -> Result<SerialPortDataManager, Error> {
         let available_ports = serialport::available_ports().map_err(|_| Error::DeviceNotFound)?;
         let ports: Vec<String> = available_ports
             .iter()
@@ -26,7 +26,7 @@ impl SerialPortDataManager {
             return Err(Error::DeviceNotFound);
         }
 
-        let path = if ports.len() > 1 {
+        let path = if is_console && ports.len() > 1 {
             eprintln!("Multiple devices found:");
             for (i, port) in ports.iter().enumerate() {
                 println!("{}: {}", i + 1, port);
@@ -46,7 +46,7 @@ impl SerialPortDataManager {
             ports[0].clone()
         };
 
-        SerialPortDataManager::new(&path).map_err(|_| Error::ConnectionError)
+        SerialPortDataManager::new(&path).map_err(|err| Error::ConnectionError(err.to_string()))
     }
 }
 
@@ -56,9 +56,10 @@ impl Error {
             Error::DeviceNotFound => {
                 std::io::Error::new(std::io::ErrorKind::NotFound, "Device not found")
             }
-            Error::ConnectionError => {
-                std::io::Error::new(std::io::ErrorKind::Other, "Connection error")
-            }
+            Error::ConnectionError(err) => std::io::Error::new(
+                std::io::ErrorKind::ConnectionAborted,
+                format!("Connection error: {}", err),
+            ),
         }
     }
 }

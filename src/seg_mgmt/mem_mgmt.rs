@@ -16,18 +16,18 @@ impl SegmentManager {
     }
 
     pub fn find_new_segment_address(&self, size: u32) -> Option<u32> {
-        let last_data_address = self.last_data_address();
+        let next_data_address = self.next_data_address();
         let end_data_address = self.end_data_address();
 
-        if last_data_address + size > end_data_address - SEGMENT_SIZE {
+        if next_data_address + size > end_data_address - SEGMENT_SIZE {
             return None;
         } else {
-            return Some(last_data_address);
+            return Some(next_data_address);
         }
     }
 
     pub fn free_memory_size(&self) -> u32 {
-        self.end_data_address() - self.last_data_address()
+        self.end_data_address() - self.next_data_address()
     }
 
     pub fn memory_to_optimize(&self) -> u32 {

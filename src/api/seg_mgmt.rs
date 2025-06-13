@@ -21,7 +21,7 @@ pub enum RefDeviceStatus<'a> {
 
 impl DeviceStatus {
     pub fn connect_device() -> Self {
-        match SerialPortDataManager::find_device() {
+        match SerialPortDataManager::connect_to_device(false) {
             Ok(spdm) => {
                 let mut seg_mgmt: SegmentManager = spdm.into_segment_manager();
                 match seg_mgmt.load_segments() {

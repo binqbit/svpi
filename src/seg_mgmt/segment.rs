@@ -126,6 +126,8 @@ impl SegmentManager {
     }
 
     pub fn find_segment_by_name(&mut self, name: &str) -> Option<&mut Segment> {
-        self.segments.iter_mut().find(|seg| seg.get_name() == name)
+        self.segments
+            .iter_mut()
+            .find(|seg| seg.status && seg.get_name() == name)
     }
 }

@@ -2,10 +2,10 @@ use crate::spdm::SerialPortDataManager;
 
 pub type RawSegmentInfo = (u32, u32, DataType, bool, [u8; 32]);
 pub const SEGMENT_SIZE: u32 = std::mem::size_of::<RawSegmentInfo>() as u32;
-pub const START_INIT_DATA: &[u8] = b"\0<INIT_SEGMENTS_DATA>\0";
-pub const END_INIT_DATA: &[u8] = b"\0</INIT_SEGMENTS_DATA>\0";
+pub const START_INIT_DATA: &[u8] = b"\0<METADATA>\0";
+pub const END_INIT_DATA: &[u8] = b"\0</METADATA>\0";
 pub const ROOT_PASSWORD_SIZE: u32 = 128;
-pub const ARCHITECTURE_VERSION: u32 = 3;
+pub const ARCHITECTURE_VERSION: u32 = 4;
 
 pub struct SegmentManager {
     pub spdm: SerialPortDataManager,

@@ -16,7 +16,16 @@ pub fn confirm(text: &str) -> bool {
 
 pub fn get_password(check_flag: bool, confirm: bool, text: Option<String>) -> Option<String> {
     let text = text.unwrap_or("Password".to_string());
-    let password_flag = args::get_flag(vec!["--password", "-p", "--password2", "-p2"]);
+    let password_flag = args::get_flag(vec![
+        "--password",
+        "-p",
+        "--root-password",
+        "-rp",
+        "--password2",
+        "-p2",
+        "--root-password2",
+        "-rp2",
+    ]);
     if !check_flag || password_flag.is_some() {
         loop {
             print!("{text}: ");
@@ -26,8 +35,7 @@ pub fn get_password(check_flag: bool, confirm: bool, text: Option<String>) -> Op
                 return None;
             }
             if confirm
-                || password_flag == Some("--password2".to_string())
-                || password_flag == Some("-p2".to_string())
+                || args::get_flag(vec!["--password2", "-p2", "--root-password2", "-rp2"]).is_some()
             {
                 print!("Confirm {text}: ");
                 std::io::stdout().flush().unwrap();

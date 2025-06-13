@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub fn load_segments_info() -> std::io::Result<Option<SegmentManager>> {
-    let mut seg_mgmt = match SerialPortDataManager::find_device() {
+    let mut seg_mgmt = match SerialPortDataManager::connect_to_device(true) {
         Ok(spdm) => spdm.into_segment_manager(),
         Err(err) => return Err(err.to_std_err()),
     };
@@ -33,7 +33,7 @@ pub fn load_segments_info() -> std::io::Result<Option<SegmentManager>> {
 }
 
 pub fn get_segment_manager() -> Result<SegmentManager, spdm::Error> {
-    SerialPortDataManager::find_device().map(|spdm| spdm.into_segment_manager())
+    SerialPortDataManager::connect_to_device(true).map(|spdm| spdm.into_segment_manager())
 }
 
 pub fn get_password_for_decode(
@@ -65,7 +65,7 @@ pub fn get_password(
 ) -> std::io::Result<Option<String>> {
     let password = console::get_password(check_flag, confirm, None);
     if let Some(password) = &password {
-        if args::get_flag(vec!["--root-encrypt", "-re"]).is_some() {
+        if args::get_flag(vec!["--root-password", "-rp"]).is_some() {
             return get_password_for_decode(seg_mgmt, password, true);
         }
     }
@@ -116,7 +116,11 @@ pub fn print_segments(
                 match decrypt(&data, password.as_bytes()) {
                     Ok(data) => {
                         let data = String::from_utf8_lossy(data.as_slice()).into_owned();
-                        ("Decrypted", data)
+                        if is_view {
+                            ("Decrypted", data)
+                        } else {
+                            ("Encrypted", format!("{} bytes", seg.size))
+                        }
                     }
                     Err(_) => ("Error", "Password does not match".to_string()),
                 }
@@ -142,7 +146,13 @@ fn export_segment_with_type(seg: &Segment, data: &[u8], is_encrypted: bool) -> (
     let (name, data) = if is_encrypted {
         (format!("@{}", seg.get_name()), base64::encode(&data))
     } else {
-        (seg.get_name(), String::from_utf8_lossy(data).into_owned())
+        let data = String::from_utf8_lossy(data).into_owned();
+        let data = if data.find('\n').is_some() {
+            format!("{:?}", data)
+        } else {
+            data
+        };
+        (seg.get_name(), data)
     };
     (name, data)
 }
@@ -201,6 +211,11 @@ pub fn import_from_file(
         .collect::<Vec<(&str, &str, DataType)>>();
     for (name, data, data_type) in list.iter() {
         let (data, data_type) = if data_type == &DataType::Plain {
+            let data = if data.starts_with("b\"") && data.ends_with('"') {
+                serde_json::from_str::<String>(&data).unwrap_or(data.to_string())
+            } else {
+                data.to_string()
+            };
             if let Some(password) = password {
                 let data = encrypt(data.as_bytes(), password.as_bytes()).map_err(|_| {
                     std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!")
