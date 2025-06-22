@@ -1,6 +1,6 @@
 [package]
 name = "svpi"
-version = "2.2.5"
+version = "2.9.0"
 edition = "2021"
 
 [dependencies]
@@ -9,6 +9,7 @@ ring = "0.17.14"
 rpassword = "7.4.0"
 arboard = "3.5.0"
 base64 = "0.22.1"
+base58 = "0.2.0"
 
 # For API
 tokio = { version = '1.45.1', features = ["full"] }
@@ -16,3 +17,4 @@ rocket = { version = "0.5.1", features = ["json"] }
 rocket_cors = "0.6.0"
 serde_json = "1.0.140"
 serde = { version = "1.0.219", features = ["derive"] }
+hex = "0.4.3"

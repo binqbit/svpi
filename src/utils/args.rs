@@ -14,10 +14,10 @@ fn skip_flags() -> usize {
     skip
 }
 
-pub fn get_flag(flags: Vec<&str>) -> Option<String> {
+pub fn check_flag(flags: Vec<&str>) -> bool {
     std::env::args()
         .skip(2)
-        .find(|arg| flags.contains(&arg.as_str()))
+        .any(|arg| flags.contains(&arg.as_str()))
 }
 
 pub fn get_param(id: usize) -> Option<String> {

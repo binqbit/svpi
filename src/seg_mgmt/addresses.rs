@@ -29,7 +29,7 @@ impl SegmentManager {
         self.segments_info_address() - self.segments.len() as u32 * SEGMENT_SIZE
     }
 
-    pub fn segment_info_address(&self, index: u32) -> u32 {
+    pub fn segment_meta_address(&self, index: u32) -> u32 {
         self.segments_info_address() - (index + 1) * SEGMENT_SIZE
     }
 
@@ -38,13 +38,10 @@ impl SegmentManager {
     }
 
     pub fn next_data_address(&self) -> u32 {
-        let mut address = self.start_data_address();
-        for segment in &self.segments {
-            let end_address = segment.address + segment.size;
-            if end_address > address {
-                address = end_address;
-            }
+        if let Some(last_segment) = self.segments.first() {
+            return last_segment.address + last_segment.size;
+        } else {
+            return self.start_data_address();
         }
-        address
     }
 }

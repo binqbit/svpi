@@ -1,16 +1,13 @@
+use crate::seg_mgmt::segment::SegmentError;
+
 use super::{Segment, SegmentManager, SEGMENT_SIZE};
 
 impl SegmentManager {
     pub fn filter_and_sort_segments(&self) -> Vec<Segment> {
-        let mut segments: Vec<Segment> = self
-            .segments
-            .iter()
-            .filter(|segment| segment.status)
-            .cloned()
-            .collect();
+        let mut segments: Vec<Segment> = self.get_active_segments().into_iter().cloned().collect();
         segments.sort_by(|a, b| b.address.cmp(&a.address));
         for (i, segment) in segments.iter_mut().rev().enumerate() {
-            segment.index = i as u32;
+            segment.meta_address = self.segment_meta_address(i as u32);
         }
         segments
     }
@@ -33,28 +30,32 @@ impl SegmentManager {
     pub fn memory_to_optimize(&self) -> u32 {
         self.segments
             .iter()
-            .filter(|segment| !segment.status)
+            .filter(|segment| !segment.is_active)
             .map(|segment| segment.size + SEGMENT_SIZE)
             .sum::<u32>()
     }
 
-    pub fn optimizate_segments(&mut self) -> std::io::Result<u32> {
+    pub fn optimize_segments(&mut self) -> Result<u32, SegmentError> {
         let optimized_size = self.memory_to_optimize();
         let mut segments = self.filter_and_sort_segments();
 
         let mut optimized_address = self.start_data_address();
         for segment in segments.iter_mut().rev() {
             if optimized_address != segment.address {
-                let data = self.read_segment_data(segment)?;
-                segment.address = optimized_address;
-                self.write_segment_data(segment, &data)?;
-                self.save_segment_info(segment)?;
+                let data = segment
+                    .read_data(None)?
+                    .to_bytes(None)
+                    .map_err(SegmentError::DataError)?;
+                segment.set_address(optimized_address);
+                segment.write_data(&data)?;
+                segment.update_meta()?;
             }
             optimized_address += segment.size;
         }
         if optimized_size > 0 {
             self.segments = segments;
-            self.save_segments_count()?;
+            self.save_segments_count()
+                .map_err(SegmentError::UpdateInfoError)?;
         }
 
         Ok(optimized_size)

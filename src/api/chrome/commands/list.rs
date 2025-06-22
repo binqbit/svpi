@@ -11,14 +11,14 @@ pub enum DataTypeResponse {
     Encrypted,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct SegmentResponse {
     name: String,
-    data_type: DataTypeResponse,
+    data_type: DataType,
     size: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ListResponse {
     status: Status,
     segments: Vec<SegmentResponse>,
@@ -26,14 +26,11 @@ pub struct ListResponse {
 
 pub fn list(seg_mgmt: &mut SegmentManager) -> Result<ListResponse, Status> {
     let segments = seg_mgmt
-        .get_segments_info()
+        .get_active_segments()
         .into_iter()
         .map(|seg| SegmentResponse {
             name: seg.get_name(),
-            data_type: match seg.data_type {
-                DataType::Plain => DataTypeResponse::Plain,
-                DataType::Encrypted => DataTypeResponse::Encrypted,
-            },
+            data_type: seg.data_type,
             size: seg.size,
         })
         .collect::<Vec<SegmentResponse>>();

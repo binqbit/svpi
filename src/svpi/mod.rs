@@ -1,104 +1,81 @@
 mod utils;
 pub use utils::*;
+pub mod result;
 
+use self::result::{Error, Result};
 use crate::{
-    seg_mgmt::DataType,
-    spdm,
-    utils::{
-        args, console,
-        crypto::{decrypt, encrypt},
-    },
+    seg_mgmt::{Data, SegmentError},
+    utils::{args, terminal},
 };
 
-pub fn init_segments(memory_size: u32) -> std::io::Result<()> {
-    let mut seg_mgmt = get_segment_manager().map_err(spdm::Error::to_std_err)?;
-    if seg_mgmt.check_init_data()? {
+pub fn init_segments(memory_size: u32) -> Result<()> {
+    let mut seg_mgmt = get_segment_manager()?;
+    if seg_mgmt.check_init_data().map_err(Into::into)? {
         println!("Device already initialized!");
     }
-    if !console::confirm("Are you sure you want to initialize the device?") {
+    if !terminal::confirm("Are you sure you want to initialize the device?") {
         return Ok(());
     }
-    seg_mgmt.init_segments(memory_size)?;
+    seg_mgmt.init_segments(memory_size).map_err(Into::into)?;
     println!("Device initialized!");
     Ok(())
 }
 
-pub fn set_root_password() -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
-        if seg_mgmt.is_root_password_set()? {
+pub fn set_root_password() -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
+        if seg_mgmt.is_root_password_set().map_err(Into::into)? {
             println!("Root password already set!");
-            if !console::confirm("Do you want to change the root password?") {
+            if !terminal::confirm("Do you want to change the root password?") {
                 return Ok(());
             }
         }
 
         let root_password = if let Some(root_password) =
-            console::get_password(false, true, Some("Root Password".to_string()))
+            terminal::get_password(false, true, Some("Root Password".to_string()))
         {
             root_password
         } else {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "Root password is required!",
-            ));
+            return Err(Error::PasswordIsRequired);
         };
 
-        let password = console::get_password(false, true, Some("Password".to_string()));
+        let password = terminal::get_password(false, true, Some("Password".to_string()));
         let password = if let Some(password) = password {
             password
         } else {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "Password is required!",
-            ));
+            return Err(Error::PasswordIsRequired);
         };
 
-        let encrypted_root_password = encrypt(root_password.as_bytes(), password.as_bytes())
-            .map_err(|_| {
-                std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!")
-            })?;
-
-        seg_mgmt.set_root_password(&encrypted_root_password)?;
+        seg_mgmt.set_root_password(&root_password, &password)?;
     }
     Ok(())
 }
 
-pub fn reset_root_password() -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
-        if !seg_mgmt.is_root_password_set()? {
+pub fn reset_root_password() -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
+        if !seg_mgmt.is_root_password_set().map_err(Into::into)? {
             println!("Root password not set!");
             return Ok(());
         }
-        if !console::confirm("Are you sure you want to remove the root password?") {
+        if !terminal::confirm("Are you sure you want to remove the root password?") {
             return Ok(());
         }
-        seg_mgmt.reset_root_password()?;
+        seg_mgmt.reset_root_password().map_err(Into::into)?;
         println!("Root password removed!");
     }
     Ok(())
 }
 
-pub fn get_root_password() -> std::io::Result<Option<String>> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
-        if seg_mgmt.is_root_password_set()? {
-            let password = console::get_password(false, true, Some("Password".to_string()));
+pub fn get_root_password() -> Result<Option<String>> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
+        if seg_mgmt.is_root_password_set().map_err(Into::into)? {
+            let password = terminal::get_password(false, true, Some("Password".to_string()));
             let password = if let Some(password) = password {
                 password
             } else {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "Password is required!",
-                ));
+                return Err(Error::PasswordIsRequired);
             };
-            let encrypted_root_password = seg_mgmt.get_root_password()?;
-            let root_password =
-                decrypt(&encrypted_root_password, password.as_bytes()).map_err(|_| {
-                    std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!")
-                })?;
-            let root_password = String::from_utf8_lossy(root_password.as_slice()).into_owned();
-            let is_view = args::get_flag(vec!["--view", "-v"]).is_some()
-                || args::get_flag(vec!["--clipboard", "-c"]).is_none();
-            if is_view {
+            let root_password = seg_mgmt.get_root_password(&password, None)?;
+            if !args::check_flag(vec!["--clipboard", "-c"]) {
                 println!("Root password: {}", root_password);
             }
             return Ok(Some(root_password));
@@ -109,28 +86,29 @@ pub fn get_root_password() -> std::io::Result<Option<String>> {
     Ok(None)
 }
 
-pub fn format_data() -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
-        if !console::confirm("Are you sure you want to format the data?") {
+pub fn format_data() -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
+        if !terminal::confirm("Are you sure you want to format the data?") {
             return Ok(());
         }
-        seg_mgmt.format_data()?;
+        seg_mgmt.format_data().map_err(Into::into)?;
         println!("Data formatted!");
     }
     Ok(())
 }
 
-pub fn print_segments_info() -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
+pub fn print_segments_meta() -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
         print_memory_state(&seg_mgmt, None);
-        let segs = seg_mgmt.get_segments_info();
+        let segs = seg_mgmt.get_active_segments();
         if !segs.is_empty() {
-            let password = if segs.iter().any(|seg| seg.data_type == DataType::Encrypted) {
+            let password = if segs.iter().any(|seg| seg.is_encrypted) {
                 get_password(&mut seg_mgmt, true, false)?
             } else {
                 None
             };
-            print_segments(&mut seg_mgmt, segs, password.as_ref(), PrintType::List)?;
+            let segs = seg_mgmt.get_active_segments_mut();
+            print_segments(segs, password.as_deref(), true)?;
         } else {
             println!("No data found!");
         }
@@ -138,24 +116,19 @@ pub fn print_segments_info() -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn set_segment(name: &str, data: &str) -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
+pub fn set_segment(name: &str, data: &str) -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
         let password = get_password(&mut seg_mgmt, true, false)?;
-        let (data, data_type) = if let Some(password) = &password {
-            (
-                encrypt(data.as_bytes(), password.as_bytes()).map_err(|_| {
-                    std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!")
-                })?,
-                DataType::Encrypted,
-            )
-        } else {
-            (data.as_bytes().to_vec(), DataType::Plain)
-        };
-        let seg = seg_mgmt
-            .set_segment(name, &data, data_type)
-            .map(|seg| seg.cloned())?;
-        if let Some(seg) = seg {
-            print_segments(&mut seg_mgmt, vec![seg], password.as_ref(), PrintType::Set)?;
+        let data = Data::detect_type(data);
+        let is_created = seg_mgmt
+            .set_segment(name, data, password.as_deref())
+            .map_err(Into::into)?
+            .is_some();
+        if is_created {
+            let seg = seg_mgmt
+                .find_segment_by_name(name)
+                .ok_or(Error::SegmentError(SegmentError::NotFound))?;
+            print_segments(vec![seg], password.as_deref(), false)?;
             println!("Data '{}' saved!", name);
         } else {
             println!("Not enough memory!");
@@ -165,45 +138,30 @@ pub fn set_segment(name: &str, data: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn get_segment(name: &str) -> std::io::Result<Option<String>> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
-        if let Some(seg) = seg_mgmt.find_segment_by_name(name).cloned() {
-            if seg.data_type == DataType::Encrypted {
-                let password = get_password(&mut seg_mgmt, true, false)?;
-                if let Some(password) = password {
-                    print_segments(
-                        &mut seg_mgmt,
-                        vec![seg.clone()],
-                        Some(&password),
-                        PrintType::Get,
-                    )?;
-                    let data = seg_mgmt.read_segment_data(&seg)?;
-                    let data = decrypt(&data, password.as_bytes()).map_err(|_| {
-                        std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid password!")
-                    })?;
-                    return Ok(Some(String::from_utf8_lossy(data.as_slice()).into_owned()));
-                }
-            } else {
-                print_segments(&mut seg_mgmt, vec![seg.clone()], None, PrintType::Get)?;
-                let data = seg_mgmt.read_segment_data(&seg)?;
-                return Ok(Some(String::from_utf8_lossy(data.as_slice()).into_owned()));
-            }
+pub fn get_segment(name: &str) -> Result<Option<String>> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
+        let is_encrypted = if let Some(seg) = seg_mgmt.find_segment_by_name(name) {
+            seg.is_encrypted
         } else {
             println!("Data '{}' not found!", name);
+            return Ok(None);
+        };
+        let password = get_password(&mut seg_mgmt, !is_encrypted, false)?;
+        if let Some(seg) = seg_mgmt.find_segment_by_name(name) {
+            print_segments(vec![seg], password.as_deref(), false)?;
         }
     }
     Ok(None)
 }
 
-pub fn remove_segment(name: &str) -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
-        let seg = seg_mgmt.find_segment_by_name(name).cloned();
-        if let Some(seg) = seg {
-            print_segments(&mut seg_mgmt, vec![seg.clone()], None, PrintType::Remove)?;
-            if !console::confirm(&format!("Are you sure you want to remove '{}'?", name)) {
+pub fn remove_segment(name: &str) -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
+        if let Some(seg) = seg_mgmt.find_segment_by_name(name) {
+            print_segments(vec![seg], None, true)?;
+            if !terminal::confirm(&format!("Are you sure you want to remove '{}'?", name)) {
                 return Ok(());
             }
-            seg_mgmt.remove_segment(seg.index)?;
+            seg.remove().map_err(Into::into)?;
             println!("Data '{}' removed!", name);
         } else {
             println!("Data not found!");
@@ -212,9 +170,9 @@ pub fn remove_segment(name: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn optimize() -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
-        let optimized_size = seg_mgmt.optimizate_segments()?;
+pub fn optimize() -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
+        let optimized_size = seg_mgmt.optimize_segments().map_err(Into::into)?;
         print_memory_state(&seg_mgmt, Some(optimized_size));
         if optimized_size > 0 {
             println!("Memory optimized!");
@@ -225,39 +183,38 @@ pub fn optimize() -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn export(file_name: &str) -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
+pub fn export(file_name: &str) -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
         let password = get_password(&mut seg_mgmt, true, false)?;
-        let segs = seg_mgmt.get_segments_info();
-        export_to_file(&mut seg_mgmt, segs, file_name, password.as_ref())?;
+        export_to_file(&mut seg_mgmt, file_name, password.as_deref())?;
         println!("Data exported to '{}'", file_name);
     }
     Ok(())
 }
 
-pub fn import(file_name: &str) -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
+pub fn import(file_name: &str) -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
         let password = get_password(&mut seg_mgmt, true, false)?;
-        import_from_file(&mut seg_mgmt, file_name, password.as_ref())?;
+        import_from_file(&mut seg_mgmt, file_name, password.as_deref())?;
         println!("Data imported from '{}'", file_name);
     }
     Ok(())
 }
 
-pub fn save_dump(file_name: &str) -> std::io::Result<()> {
-    if let Some(mut seg_mgmt) = load_segments_info()? {
+pub fn save_dump(file_name: &str) -> Result<()> {
+    if let Some(mut seg_mgmt) = get_inited_manager()? {
         save_dump_to_file(&mut seg_mgmt, file_name)?;
         println!("Dump saved to '{}'", file_name);
     }
     Ok(())
 }
 
-pub fn load_dump(file_name: &str) -> std::io::Result<()> {
-    let mut seg_mgmt = get_segment_manager().map_err(spdm::Error::to_std_err)?;
-    if seg_mgmt.check_init_data()? {
+pub fn load_dump(file_name: &str) -> Result<()> {
+    let mut seg_mgmt = get_segment_manager()?;
+    if seg_mgmt.check_init_data().map_err(Into::into)? {
         println!("Device already initialized!");
     }
-    if !console::confirm("Are you sure you want to load the dump?") {
+    if !terminal::confirm("Are you sure you want to load the dump?") {
         return Ok(());
     }
     load_dump_from_file(&mut seg_mgmt, file_name)?;

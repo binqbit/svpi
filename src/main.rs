@@ -1,4 +1,4 @@
-mod api;
+// mod api;
 mod seg_mgmt;
 mod spdm;
 mod svpi;
@@ -7,14 +7,16 @@ mod utils;
 use arboard::Clipboard;
 use seg_mgmt::ARCHITECTURE_VERSION;
 use spdm::SerialPortDataManager;
-use utils::{args, variables::VERSION};
+use utils::args;
+
+use svpi::result::Result;
 
 fn print_info() {
     println!("# Secure Vault Personal Information (SVPI)");
     println!("{}", "=".repeat(59));
     println!("| {:32} | {:20} |", "Info", "Value");
     println!("{}", "=".repeat(59));
-    println!("| {:32} | {:>20} |", "Version", VERSION);
+    println!("| {:32} | {:>20} |", "Version", env!("CARGO_PKG_VERSION"));
     println!("{}", "-".repeat(59));
     println!(
         "| {:32} | {:20} |",
@@ -62,9 +64,9 @@ fn print_info() {
                 }
             }
         }
-        Err(spdm::Error::ConnectionError(err)) => {
+        Err(err) => {
             println!(
-                "The device is not connected to receive information: {}",
+                "The device is not connected to receive information: {:?}",
                 err
             );
         }
@@ -208,7 +210,7 @@ fn print_help() {
 }
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<()> {
     match args::get_command() {
         Some(cmd) => match cmd.as_str() {
             "init" | "i" => {
@@ -231,12 +233,12 @@ async fn main() -> std::io::Result<()> {
                 svpi::load_dump(&file_name)?;
             }
             "list" | "l" => {
-                svpi::print_segments_info()?;
+                svpi::print_segments_meta()?;
             }
             "set" | "s" => {
                 let name = args::get_param(0).expect("Name is required!");
-                let clipboard = args::get_flag(vec!["--clipboard", "-c"]);
-                let data = if clipboard.is_some() {
+                let clipboard = args::check_flag(vec!["--clipboard", "-c"]);
+                let data = if clipboard {
                     let mut clipboard =
                         Clipboard::new().expect("Failed to create clipboard instance!");
                     clipboard
@@ -251,8 +253,8 @@ async fn main() -> std::io::Result<()> {
                 let name = args::get_param(0).expect("Name is required!");
                 let data = svpi::get_segment(&name)?;
                 if let Some(data) = data {
-                    let clipboard = args::get_flag(vec!["--clipboard", "-c"]);
-                    if clipboard.is_some() {
+                    let clipboard = args::check_flag(vec!["--clipboard", "-c"]);
+                    if clipboard {
                         let mut clipboard =
                             Clipboard::new().expect("Failed to create clipboard instance!");
                         clipboard
@@ -286,8 +288,8 @@ async fn main() -> std::io::Result<()> {
             "get-password" | "gp" => {
                 let password = svpi::get_root_password()?;
                 if let Some(password) = password {
-                    let clipboard = args::get_flag(vec!["--clipboard", "-c"]);
-                    if clipboard.is_some() {
+                    let clipboard = args::check_flag(vec!["--clipboard", "-c"]);
+                    if clipboard {
                         let mut clipboard =
                             Clipboard::new().expect("Failed to create clipboard instance!");
                         clipboard
@@ -299,7 +301,7 @@ async fn main() -> std::io::Result<()> {
             }
             "check" => {
                 let mut spdm =
-                    SerialPortDataManager::connect_to_device(true).map_err(|e| e.to_std_err())?;
+                    SerialPortDataManager::connect_to_device(true).map_err(Into::into)?;
                 let msg = b"Hello, World!";
                 let data = spdm.test(msg).expect("Failed to test device!");
                 if data == msg {
@@ -315,13 +317,13 @@ async fn main() -> std::io::Result<()> {
                 print_help();
             }
             "api-server" => {
-                api::server::api_server()
-                    .launch()
-                    .await
-                    .expect("Failed to start API server!");
+                // api::server::api_server()
+                //     .launch()
+                //     .await
+                //     .expect("Failed to start API server!");
             }
             "api-chrome" => {
-                api::chrome::run_chrome_app().expect("Failed to launch Chrome app!");
+                // api::chrome::run_chrome_app().expect("Failed to launch Chrome app!");
             }
             _ => {
                 println!("Invalid command!");

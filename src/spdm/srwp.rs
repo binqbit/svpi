@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::spdm::SerialPortDataManager;
+use crate::spdm::{DeviceError, SerialPortDataManager};
 
 const SRWP_CMD: u8 = 0x00;
 const CMD_TEST: u8 = 0x00;
@@ -15,8 +15,8 @@ const MAX_TIME_PER_TRANSACTION: u64 =
     1000 * MAX_BYTES_PER_TRANSACTION as u64 / MAX_BYTES_PER_SECOND;
 
 impl SerialPortDataManager {
-    pub fn test(&mut self, data: &[u8]) -> std::io::Result<Vec<u8>> {
-        let serial_port = self.get_serial_port();
+    pub fn test(&mut self, data: &[u8]) -> Result<Vec<u8>, DeviceError> {
+        let serial_port = self.get_serial_port()?;
         serial_port.clear()?;
 
         let mut buffer = vec![0u8; 6 + data.len()];
@@ -37,8 +37,8 @@ impl SerialPortDataManager {
         Ok(data)
     }
 
-    fn _read_data(&mut self, address: u32, length: u32) -> std::io::Result<Vec<u8>> {
-        let serial_port = self.get_serial_port();
+    fn _read_data(&mut self, address: u32, length: u32) -> Result<Vec<u8>, DeviceError> {
+        let serial_port = self.get_serial_port()?;
         serial_port.clear()?;
 
         let mut buffer = vec![0u8; 10];
@@ -64,8 +64,8 @@ impl SerialPortDataManager {
         Ok(data)
     }
 
-    fn _write_data(&mut self, address: u32, data: &[u8]) -> std::io::Result<()> {
-        let serial_port = self.get_serial_port();
+    fn _write_data(&mut self, address: u32, data: &[u8]) -> Result<(), DeviceError> {
+        let serial_port = self.get_serial_port()?;
         serial_port.clear()?;
 
         let mut buffer = vec![0u8; 10 + data.len()];
@@ -84,7 +84,7 @@ impl SerialPortDataManager {
         Ok(())
     }
 
-    pub fn read_data(&mut self, address: u32, length: u32) -> std::io::Result<Vec<u8>> {
+    pub fn read_data(&mut self, address: u32, length: u32) -> Result<Vec<u8>, DeviceError> {
         let mut data = Vec::new();
         let mut count = 0u32;
         while count < length {
@@ -101,7 +101,7 @@ impl SerialPortDataManager {
         Ok(data)
     }
 
-    pub fn write_data(&mut self, address: u32, data: &[u8]) -> std::io::Result<()> {
+    pub fn write_data(&mut self, address: u32, data: &[u8]) -> Result<(), DeviceError> {
         let mut count = 0u32;
         while count < data.len() as u32 {
             let start_time = Instant::now();

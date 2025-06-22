@@ -16,7 +16,7 @@ pub fn list(seg_mgmt: &State<Arc<RwLock<DeviceStatus>>>) -> RawJson<Value> {
     match seg_mgmt.as_mut_ref() {
         RefDeviceStatus::Some(seg_mgmt) => {
             let segments = seg_mgmt
-                .get_segments_info()
+                .get_active_segments()
                 .into_iter()
                 .map(|seg| {
                     json!({
