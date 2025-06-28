@@ -4,7 +4,7 @@ version = "2.9.0"
 edition = "2021"
 
 [dependencies]
-serialport = "4.7.2"
+serialport = { version = "4.7.2", default-features = false }
 ring = "0.17.14"
 rpassword = "7.4.0"
 arboard = "3.5.0"
