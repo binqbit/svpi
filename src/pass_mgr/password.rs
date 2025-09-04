@@ -1,7 +1,9 @@
 use crate::{
     pass_mgr::{PasswordManager, PasswordManagerError},
     seg_mgr::{Data, DataType, MASTER_PASSWORD_HASH_SIZE},
-    utils::crypto::{derive_encryption_key, get_master_password_check, password_hash},
+    utils::crypto::{
+        derive_encryption_key, get_master_password_check, password_hash, DEFAULT_PASSWORD_HASH_SALT,
+    },
 };
 
 impl PasswordManager {
@@ -36,7 +38,7 @@ impl PasswordManager {
         password: &str,
     ) -> Result<bool, PasswordManagerError> {
         let encryption_key = derive_encryption_key(master_password.as_bytes(), name.as_bytes());
-        let password_fingerprint = password_hash(password.as_bytes(), name.as_bytes());
+        let password_fingerprint = password_hash(password.as_bytes(), DEFAULT_PASSWORD_HASH_SALT);
         let data = Data::Binary(encryption_key.to_vec())
             .encrypt(password.as_bytes())
             .map_err(PasswordManagerError::EncryptionError)?;
