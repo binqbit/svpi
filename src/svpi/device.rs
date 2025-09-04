@@ -183,7 +183,10 @@ pub fn import_data() {
     let seg_mgmt = pass_mgr.get_data_manager();
 
     let str = std::fs::read_to_string(&file_path).expect("Failed to read file");
-    let list = str.lines();
+    let list = str
+        .lines()
+        .into_iter()
+        .filter(|line| !line.trim().is_empty());
 
     for str in list {
         let formatted_data = FormattedData::decode(str).expect("Failed to decode formatted data");
