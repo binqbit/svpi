@@ -256,3 +256,84 @@ pub fn load_dump() {
         println!("Dump loaded!");
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data_mgr::DataInterfaceType;
+    use std::fs;
+
+    fn setup_mgr() -> PasswordManager {
+        let mut mgr = PasswordManager::from_device_type(DataInterfaceType::Memory(vec![])).unwrap();
+        mgr.get_data_manager().init_device(256).unwrap();
+        mgr
+    }
+
+    #[test]
+    fn init_and_format_cycle() {
+        let mut mgr = setup_mgr();
+        assert!(mgr.get_data_manager().check_init_data().unwrap());
+        mgr.save_password("a", "1", None).unwrap();
+        assert!(mgr.get_data_manager().find_segment_by_name("a").is_some());
+        mgr.get_data_manager().format_data().unwrap();
+        mgr.get_data_manager().load_segments().unwrap();
+        assert!(mgr.get_data_manager().get_active_segments().is_empty());
+    }
+
+    #[test]
+    fn dump_and_restore() {
+        let mut mgr = setup_mgr();
+        mgr.save_password("a", "1", None).unwrap();
+        let dump = mgr.get_data_manager().get_dump().unwrap();
+        let mut restored =
+            PasswordManager::try_load(DataInterfaceType::Memory(dump)).unwrap();
+        assert!(restored.get_data_manager().find_segment_by_name("a").is_some());
+    }
+
+    #[test]
+    fn export_and_import_roundtrip() {
+        let mut mgr = setup_mgr();
+        mgr.save_password("one", "1", None).unwrap();
+        mgr.save_password("two", "2", None).unwrap();
+
+        let temp = std::env::temp_dir().join("svpi_export.txt");
+
+        // export similar to export_data
+        let mut list = Vec::new();
+        for seg in mgr.get_data_manager().get_active_segments_mut() {
+            let data = seg.read_data().unwrap();
+            let formatted = FormattedData::new(
+                seg.get_name(),
+                data,
+                seg.info.data_type,
+                seg.info.password_fingerprint,
+            )
+            .encode()
+            .unwrap();
+            list.push(formatted);
+        }
+        fs::write(&temp, list.join("\n")).unwrap();
+
+        // import back
+        let mut mgr2 = setup_mgr();
+        let contents = fs::read_to_string(&temp).unwrap();
+        for line in contents.lines() {
+            let formatted = FormattedData::decode(line).unwrap();
+            let data = formatted.data.to_bytes().unwrap();
+            mgr2
+                .get_data_manager()
+                .set_segment(
+                    &formatted.name,
+                    &data,
+                    formatted.data_type,
+                    formatted.password_fingerprint,
+                )
+                .unwrap();
+        }
+
+        assert!(mgr2.get_data_manager().find_segment_by_name("one").is_some());
+        assert!(mgr2.get_data_manager().find_segment_by_name("two").is_some());
+
+        let _ = fs::remove_file(temp);
+    }
+}

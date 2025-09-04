@@ -99,3 +99,37 @@ pub fn add_encryption_key() {
 
     println!("Encryption key '{}' added successfully!", name);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{data_mgr::DataInterfaceType, seg_mgr::DataType};
+
+    fn setup_mgr() -> PasswordManager {
+        let mut mgr = PasswordManager::from_device_type(DataInterfaceType::Memory(vec![])).unwrap();
+        mgr.get_data_manager().init_device(256).unwrap();
+        mgr
+    }
+
+    #[test]
+    fn master_password_flow() {
+        let mut mgr = setup_mgr();
+        assert!(!mgr.is_master_password_set());
+        mgr.set_master_password("master").unwrap();
+        assert!(mgr.is_master_password_set());
+        assert!(mgr.check_master_password("master"));
+        mgr.reset_master_password().unwrap();
+        assert!(!mgr.is_master_password_set());
+    }
+
+    #[test]
+    fn add_encryption_key_creates_segment() {
+        let mut mgr = setup_mgr();
+        mgr.set_master_password("master").unwrap();
+        assert!(mgr
+            .add_encryption_key("master", "key1", "pwd")
+            .unwrap());
+        let seg = mgr.get_data_manager().find_segment_by_name("key1").unwrap();
+        assert_eq!(seg.info.data_type, DataType::EncryptionKey);
+    }
+}

@@ -154,3 +154,54 @@ pub fn change_data_type() {
 
     println!("Data '{}' changed to type '{:?}'", name, new_data_type);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{data_mgr::DataInterfaceType, seg_mgr::DataType};
+
+    fn setup_mgr() -> PasswordManager {
+        let mut mgr = PasswordManager::from_device_type(DataInterfaceType::Memory(vec![]))
+            .expect("init");
+        mgr.get_data_manager()
+            .init_device(1024)
+            .expect("init device");
+        mgr
+    }
+
+    #[test]
+    fn save_and_list_data() {
+        let mut mgr = setup_mgr();
+        mgr.save_password("first", "alpha", None).unwrap();
+        mgr.save_password("second", "beta", None).unwrap();
+
+        let names: Vec<_> = mgr
+            .get_data_manager()
+            .get_active_segments()
+            .iter()
+            .map(|s| s.get_name())
+            .collect();
+        assert!(names.contains(&"first".to_string()));
+        assert!(names.contains(&"second".to_string()));
+    }
+
+    #[test]
+    fn rename_change_type_and_remove() {
+        let mut mgr = setup_mgr();
+        mgr.save_password("item", "42", None).unwrap();
+        mgr.rename_password("item", "renamed").unwrap();
+        mgr.change_data_type("renamed", DataType::Hex).unwrap();
+
+        let seg = mgr
+            .get_data_manager()
+            .find_segment_by_name("renamed")
+            .unwrap();
+        assert_eq!(seg.info.data_type, DataType::Hex);
+
+        mgr.remove_password("renamed").unwrap();
+        assert!(mgr
+            .get_data_manager()
+            .find_segment_by_name("renamed")
+            .is_none());
+    }
+}
