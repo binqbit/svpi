@@ -62,12 +62,11 @@ impl SegmentManager {
     }
 
     pub fn load_metadata(&mut self) -> Result<(), SegmentError> {
-        // TODO: Implement error handling
         let data = self
             .data_mgr
             .read_data(self.metadata_address(), METADATA_SIZE)
-            .expect("Failed to read metadata");
-        self.metadata = Metadata::unpack(&data).expect("Failed to unpack metadata");
+            .map_err(SegmentError::ReadError)?;
+        self.metadata = Metadata::unpack(&data).map_err(SegmentError::DataError)?;
         Ok(())
     }
 

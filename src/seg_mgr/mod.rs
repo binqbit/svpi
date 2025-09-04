@@ -77,8 +77,9 @@ impl SegmentManager {
             return Err(DataManagerError::MismatchArchitectureVersion);
         }
 
-        // TODO: Implement error handling
-        seg_mgr.load_metadata().unwrap();
+        seg_mgr
+            .load_metadata()
+            .map_err(|_| DataManagerError::DeviceNotInitialized)?;
 
         seg_mgr
             .load_segments()
