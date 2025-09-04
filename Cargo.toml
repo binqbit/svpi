@@ -1,18 +1,23 @@
 [package]
 name = "svpi"
-version = "2.9.0"
+version = "4.0.0"
 edition = "2021"
 
 [dependencies]
-serialport = { version = "4.7.2", default-features = false }
+# Core
+thiserror = "2.0.12"
 ring = "0.17.14"
-rpassword = "7.4.0"
-arboard = "3.5.0"
-base64 = "0.22.1"
+arboard = "3.6.0"
+hex = "0.4.3"
 base58 = "0.2.0"
+base64 = "0.22.1"
+borsh = "1.5.7"
+borsh-derive = "1.5.7"
+serde_json = "1.0.142"
+serde = { version = "1.0.219", features = ["derive"] }
 
 # For API
-tokio = { version = '1.45.1', features = ["full"] }
+tokio = { version = '1.47.1', features = ["full"] }
 rocket = { version = "0.5.1", features = ["json"] }
 rocket_cors = "0.6.0"
 
