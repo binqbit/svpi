@@ -44,6 +44,7 @@ impl MemoryDataManager {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 

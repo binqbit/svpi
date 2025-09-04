@@ -347,6 +347,7 @@ impl FormattedData {
         FormattedData::from(name, data, data_type, password_fingerprint)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

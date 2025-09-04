@@ -61,6 +61,7 @@ impl PasswordManager {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use crate::{data_mgr::DataInterfaceType, pass_mgr::PasswordManager};
 
