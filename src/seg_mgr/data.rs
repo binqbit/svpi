@@ -347,119 +347,202 @@ impl FormattedData {
         FormattedData::from(name, data, data_type, password_fingerprint)
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+    #[test]
+    fn data_to_bytes_for_each_variant() {
+        let txt = "hello";
 
-//     const PASSWORD: &str = "secret";
+        let plain = Data::Plain(txt.to_string());
+        assert_eq!(plain.to_bytes().unwrap(), txt.as_bytes());
 
-//     #[test]
-//     fn test_data_to_bytes_roundtrip() {
-//         let txt = "hello";
+        let hex = Data::Hex(hex::encode(txt));
+        assert_eq!(hex.to_bytes().unwrap(), txt.as_bytes());
 
-//         // Plain
-//         let plain = Data::Plain(txt.to_string());
-//         assert_eq!(plain.to_bytes(None).unwrap(), txt.as_bytes());
+        let base64 = Data::Base64(base64::engine::general_purpose::STANDARD.encode(txt));
+        assert_eq!(base64.to_bytes().unwrap(), txt.as_bytes());
 
-//         // Hex
-//         let hex = Data::Hex(hex::encode(txt));
-//         assert_eq!(hex.to_bytes(None).unwrap(), txt.as_bytes());
+        let base58 = Data::Base58(txt.as_bytes().to_base58());
+        assert_eq!(base58.to_bytes().unwrap(), txt.as_bytes());
 
-//         // Base64
-//         let b64 = Data::Base64(base64::engine::general_purpose::STANDARD.encode(txt));
-//         assert_eq!(b64.to_bytes(None).unwrap(), txt.as_bytes());
+        let binary = Data::Binary(txt.as_bytes().to_vec());
+        assert_eq!(binary.to_bytes().unwrap(), txt.as_bytes());
+    }
 
-//         // Base58
-//         let b58 = Data::Base58(txt.as_bytes().to_base58());
-//         assert_eq!(b58.to_bytes(None).unwrap(), txt.as_bytes());
+    #[test]
+    fn datatype_from_bytes_for_each_variant() {
+        let bytes = b"hi";
 
-//         // Binary
-//         let bin = Data::Binary(txt.as_bytes().to_vec());
-//         assert_eq!(bin.to_bytes(None).unwrap(), txt.as_bytes());
-//     }
+        assert_eq!(
+            DataType::Binary.from_bytes(bytes).unwrap(),
+            Data::Binary(bytes.to_vec())
+        );
+        assert_eq!(
+            DataType::Plain.from_bytes(bytes).unwrap(),
+            Data::Plain("hi".to_string())
+        );
+        assert_eq!(
+            DataType::Hex.from_bytes(bytes).unwrap(),
+            Data::Hex(hex::encode(bytes))
+        );
+        assert_eq!(
+            DataType::Base58.from_bytes(bytes).unwrap(),
+            Data::Base58(bytes.to_base58())
+        );
+        assert_eq!(
+            DataType::Base64.from_bytes(bytes).unwrap(),
+            Data::Base64(base64::engine::general_purpose::STANDARD.encode(bytes))
+        );
+        assert_eq!(
+            DataType::EncryptionKey.from_bytes(bytes).unwrap(),
+            Data::Binary(bytes.to_vec())
+        );
+    }
 
-//     #[test]
-//     fn test_data_encryption_roundtrip() {
-//         let bin = Data::Binary(b"hello".to_vec());
-//         let encrypted = bin.to_bytes(Some(PASSWORD)).unwrap();
-//         assert_ne!(encrypted, b"hello".to_vec());
+    #[test]
+    fn convert_between_types() {
+        let plain = Data::Plain("hi".to_string());
+        assert_eq!(
+            plain.convert_to_type(DataType::Hex).unwrap(),
+            Data::Hex("6869".to_string())
+        );
+        assert_eq!(
+            plain.convert_to_type(DataType::Base64).unwrap(),
+            Data::Base64("aGk=".to_string())
+        );
+        assert_eq!(
+            plain.convert_to_type(DataType::Base58).unwrap(),
+            Data::Base58(b"hi".to_base58())
+        );
+        assert_eq!(
+            plain.convert_to_type(DataType::Binary).unwrap(),
+            Data::Binary(b"hi".to_vec())
+        );
+    }
 
-//         let decrypted = DataType::Binary
-//             .from_bytes(&encrypted, true, Some(PASSWORD))
-//             .unwrap();
-//         assert_eq!(decrypted, bin);
+    #[test]
+    fn to_string_variants() {
+        let bin = Data::Binary(b"hi".to_vec());
+        assert_eq!(bin.to_string().unwrap(), "6869");
 
-//         // wrong password should return encrypted data
-//         let wrong = DataType::Binary
-//             .from_bytes(&encrypted, true, Some("wrong"))
-//             .unwrap();
-//         assert!(matches!(wrong, Data::Encrypted(_)));
-//     }
+        let plain = Data::Plain("hello".to_string());
+        assert_eq!(plain.to_string().unwrap(), "hello");
 
-//     #[test]
-//     fn test_convert_between_types() {
-//         let plain = Data::Plain("hi".to_string());
-//         let hex = plain.convert_to_type(DataType::Hex).unwrap();
-//         assert_eq!(hex, Data::Hex("6869".to_string()));
+        let base58 = Data::Base58(b"hi".to_base58());
+        assert_eq!(base58.to_string().unwrap(), b"hi".to_base58());
+    }
 
-//         let base64 = hex.convert_to_type(DataType::Base64).unwrap();
-//         assert_eq!(base64, Data::Base64("aGk=".to_string()));
+    #[test]
+    fn from_str_infer_detects_type() {
+        assert_eq!(
+            Data::from_str_infer("6869"),
+            Data::Hex("6869".to_string())
+        );
+        assert_eq!(
+            Data::from_str_infer("aGk="),
+            Data::Base64("aGk=".to_string())
+        );
+        assert_eq!(
+            Data::from_str_infer("8wr"),
+            Data::Base58("8wr".to_string())
+        );
+        assert_eq!(
+            Data::from_str_infer("hello"),
+            Data::Plain("hello".to_string())
+        );
+    }
 
-//         let bin = base64.convert_to_type(DataType::Binary).unwrap();
-//         assert_eq!(bin, Data::Binary(b"hi".to_vec()));
-//     }
+    #[test]
+    fn datatype_from_string_and_from_str() {
+        assert_eq!(
+            DataType::Binary.from_string("6869").unwrap(),
+            Data::Binary(b"hi".to_vec())
+        );
+        assert_eq!(
+            DataType::Plain.from_string("hi").unwrap(),
+            Data::Plain("hi".to_string())
+        );
+        assert_eq!(
+            DataType::Hex.from_string("6869").unwrap(),
+            Data::Hex("6869".to_string())
+        );
+        assert_eq!(
+            DataType::Base58.from_string("8wr").unwrap(),
+            Data::Base58("8wr".to_string())
+        );
+        assert_eq!(
+            DataType::Base64.from_string("aGk=").unwrap(),
+            Data::Base64("aGk=".to_string())
+        );
+        assert_eq!(
+            DataType::EncryptionKey.from_string("6869").unwrap(),
+            Data::Binary(b"hi".to_vec())
+        );
 
-//     #[test]
-//     fn test_to_string_methods() {
-//         let bin = Data::Binary(b"hi".to_vec());
-//         assert_eq!(bin.to_string().unwrap(), "6869");
+        assert_eq!(DataType::from_str("hex").unwrap(), DataType::Hex);
+        assert!(DataType::from_str("unknown").is_err());
+    }
 
-//         let plain = Data::Plain("hello".to_string());
-//         assert_eq!(plain.to_string().unwrap(), "hello");
+    #[test]
+    fn fingerprint_generation_and_uniqueness() {
+        let data = b"secret";
+        let fp = DataFingerprint::get_fingerprint(data);
+        let fp2 = DataFingerprint::get_fingerprint(data);
+        assert_eq!(fp, fp2);
 
-//         let base58 = Data::Base58(b"hi".to_base58());
-//         assert_eq!(base58.to_string().unwrap(), "8wr");
-//     }
+        let existing = vec![DataFingerprint { fingerprint: fp, probe: 0 }];
+        let unique = DataFingerprint::find_unique(data, &existing);
+        assert_eq!(unique.fingerprint, fp);
+        assert_eq!(unique.probe, 1);
 
-//     #[test]
-//     fn test_detect_type() {
-//         assert!(matches!(Data::detect_type("6869"), Data::Hex(_)));
-//         assert!(matches!(Data::detect_type("aGk="), Data::Base64(_)));
-//         assert!(matches!(Data::detect_type("8wr"), Data::Base58(_)));
-//         assert!(matches!(Data::detect_type("hello"), Data::Plain(_)));
-//     }
+        let fp_str = DataFingerprint::from(fp).to_string();
+        let parsed = DataFingerprint::from_str(&fp_str).unwrap();
+        assert_eq!(parsed.fingerprint, fp);
+    }
 
-//     #[test]
-//     fn test_formatted_data_encode_decode() {
-//         let fd = FormattedData::new(
-//             "name".to_string(),
-//             Data::Plain("value".to_string()),
-//             DataType::Plain,
-//         );
-//         let encoded = fd.encode().unwrap();
-//         assert_eq!(encoded, "Plain/name: value");
+    #[test]
+    fn formatted_data_encode_decode() {
+        let fd = FormattedData::new(
+            "name".to_string(),
+            Data::Plain("value".to_string()),
+            DataType::Plain,
+            None,
+        );
+        let encoded = fd.encode().unwrap();
+        let decoded = FormattedData::decode(&encoded).unwrap();
+        assert_eq!(decoded.name, "name");
+        assert_eq!(decoded.data, Data::Plain("value".to_string()));
+        assert_eq!(decoded.data_type, DataType::Plain);
+        assert_eq!(decoded.password_fingerprint, None);
 
-//         let decoded = FormattedData::decode(&encoded.to_lowercase(), None).unwrap();
-//         assert_eq!(decoded.name, fd.name);
-//         assert_eq!(decoded.data, fd.data);
-//         assert_eq!(decoded.data_type, fd.data_type);
+        let fp_hex = "cafebabe";
+        let encoded_with_fp = format!(
+            "name = data:application/vnd.binqbit.svpi;fp={};base64,Zm9v",
+            fp_hex
+        );
+        let decoded = FormattedData::decode(&encoded_with_fp).unwrap();
+        assert_eq!(decoded.name, "name");
+        assert_eq!(decoded.data_type, DataType::Base64);
+        assert_eq!(decoded.data, Data::Base64("Zm9v".to_string()));
+        assert_eq!(
+            decoded.password_fingerprint,
+            Some(DataFingerprint::from_str(fp_hex).unwrap().fingerprint)
+        );
+    }
 
-//         // Encrypted variant
-//         let encrypted = Data::Binary(b"secret".to_vec())
-//             .to_bytes(Some(PASSWORD))
-//             .unwrap();
-//         let encoded = FormattedData::new(
-//             "enc".to_string(),
-//             Data::Encrypted(encrypted.clone()),
-//             DataType::Binary,
-//         )
-//         .encode()
-//         .unwrap();
+    #[test]
+    fn datainfo_new_sets_fields() {
+        let data1 = b"foo";
+        let info1 = DataInfo::new("name", 1, data1, DataType::Plain, None, &[]);
+        assert_eq!(&info1.name[..4], b"name");
+        assert_eq!(info1.address, 1);
+        assert_eq!(info1.size, data1.len() as u32);
+        assert_eq!(info1.data_type, DataType::Plain);
 
-//         let decoded = FormattedData::decode(&encoded.to_lowercase(), Some(PASSWORD)).unwrap();
-//         assert_eq!(decoded.name, "enc");
-//         assert_eq!(decoded.data_type, DataType::Binary);
-//         assert_eq!(decoded.data, Data::Binary(b"secret".to_vec()));
-//     }
-// }
+        let info2 = DataInfo::new("name2", 2, data1, DataType::Plain, None, &[info1.fingerprint]);
+        assert_eq!(info2.fingerprint.fingerprint, info1.fingerprint.fingerprint);
+        assert_eq!(info2.fingerprint.probe, 1);
+    }
+}
