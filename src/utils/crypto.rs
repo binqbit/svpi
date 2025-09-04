@@ -1,101 +1,145 @@
 extern crate ring;
 
-use ring::rand::SecureRandom;
-use ring::{aead, pbkdf2, rand};
-use std::num::NonZeroU32;
+use argon2::password_hash::rand_core::{OsRng, RngCore};
+use argon2::{Algorithm, Argon2, Params, Version};
+use chacha20poly1305::aead::{Aead, Payload};
+use chacha20poly1305::{Key, KeyInit, XChaCha20Poly1305, XNonce};
+use sha2::{Digest, Sha256};
+
+use crate::seg_mgr::DATA_FINGERPRINT_SIZE;
 
 const SALT_LEN: usize = 16;
-const NONCE_LEN: usize = 12;
-const KEY_LEN: usize = 32;
-const ITERATIONS: u32 = 1_000_000;
+const NONCE_LEN: usize = 24;
 
-fn gen_salt() -> [u8; SALT_LEN] {
-    let rng = rand::SystemRandom::new();
+pub const KDF_M_COST_KIB: u32 = 262_144;
+pub const KDF_T_COST: u32 = 2;
+pub const KDF_P_COST: u32 = 1;
+pub const KDF_OUTPUT_LEN: usize = 32;
+
+pub const KDF_M_COST_KIB_FOR_MASTER_PASSWORD: u32 = 524_288;
+pub const KDF_T_COST_FOR_MASTER_PASSWORD: u32 = 2;
+pub const MASTER_PASSWORD_CHECK_SALT: &[u8] = b"master_password_check";
+
+pub const KDF_M_COST_KIB_FOR_HASH: u32 = 65_536;
+pub const KDF_T_COST_FOR_HASH: u32 = 2;
+pub const DEFAULT_PASSWORD_HASH_SALT: &[u8] = b"password_hash";
+
+pub fn encrypt(data: &[u8], password: &[u8]) -> Option<Vec<u8>> {
     let mut salt = [0u8; SALT_LEN];
-    rng.fill(&mut salt).unwrap();
-    salt
+    OsRng.fill_bytes(&mut salt);
+    let mut nonce = [0u8; NONCE_LEN];
+    OsRng.fill_bytes(&mut nonce);
+
+    let params = Params::new(KDF_M_COST_KIB, KDF_T_COST, KDF_P_COST, Some(KDF_OUTPUT_LEN)).unwrap();
+    let a2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let mut key_bytes = [0u8; KDF_OUTPUT_LEN];
+    a2.hash_password_into(password, &salt, &mut key_bytes)
+        .unwrap();
+
+    let cipher = XChaCha20Poly1305::new(Key::from_slice(&key_bytes));
+    let ciphertext = cipher
+        .encrypt(
+            XNonce::from_slice(&nonce),
+            Payload {
+                msg: data,
+                aad: &[],
+            },
+        )
+        .ok()?;
+
+    key_bytes.fill(0);
+
+    let mut blob = Vec::with_capacity(SALT_LEN + NONCE_LEN + ciphertext.len());
+    blob.extend_from_slice(&salt);
+    blob.extend_from_slice(&nonce);
+    blob.extend_from_slice(&ciphertext);
+
+    Some(blob)
 }
 
-fn gen_key(password: &[u8], salt: &[u8]) -> Result<aead::LessSafeKey, ring::error::Unspecified> {
-    let mut key = [0u8; KEY_LEN];
-    let iterations = NonZeroU32::new(ITERATIONS).unwrap();
-    pbkdf2::derive(
-        pbkdf2::PBKDF2_HMAC_SHA256,
-        iterations,
-        salt,
-        password,
-        &mut key,
+pub fn decrypt(blob: &[u8], password: &[u8]) -> Option<Vec<u8>> {
+    if blob.len() < SALT_LEN + NONCE_LEN {
+        return None;
+    }
+    let (salt, rest) = blob.split_at(SALT_LEN);
+    let (nonce, ciphertext) = rest.split_at(NONCE_LEN);
+
+    let params = Params::new(KDF_M_COST_KIB, KDF_T_COST, KDF_P_COST, Some(KDF_OUTPUT_LEN)).unwrap();
+    let a2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let mut key_bytes = [0u8; KDF_OUTPUT_LEN];
+    a2.hash_password_into(password, salt, &mut key_bytes)
+        .unwrap();
+
+    let cipher = XChaCha20Poly1305::new(Key::from_slice(&key_bytes));
+    let plaintext = cipher.decrypt(
+        XNonce::from_slice(nonce),
+        Payload {
+            msg: ciphertext,
+            aad: &[],
+        },
     );
-    let sealing_key = aead::LessSafeKey::new(aead::UnboundKey::new(&aead::AES_256_GCM, &key)?);
-    Ok(sealing_key)
-}
 
-fn gen_nonce() -> [u8; NONCE_LEN] {
-    let rng = rand::SystemRandom::new();
-    let mut nonce = [0u8; NONCE_LEN];
-    rng.fill(&mut nonce).unwrap();
-    nonce
-}
+    key_bytes.fill(0);
 
-fn get_salt(encrypted_data: &[u8]) -> Result<[u8; SALT_LEN], ring::error::Unspecified> {
-    if encrypted_data.len() < SALT_LEN {
-        return Err(ring::error::Unspecified);
+    if let Ok(plaintext) = plaintext {
+        Some(plaintext)
+    } else {
+        None
     }
-    let mut salt = [0u8; SALT_LEN];
-    salt.copy_from_slice(&encrypted_data[..SALT_LEN]);
-    Ok(salt)
 }
 
-fn get_nonce(encrypted_data: &[u8]) -> Result<[u8; NONCE_LEN], ring::error::Unspecified> {
-    if encrypted_data.len() < SALT_LEN + NONCE_LEN {
-        return Err(ring::error::Unspecified);
-    }
-    let mut nonce = [0u8; NONCE_LEN];
-    nonce.copy_from_slice(&encrypted_data[SALT_LEN..SALT_LEN + NONCE_LEN]);
-    Ok(nonce)
+pub fn password_hash(password: &[u8], salt: &[u8]) -> [u8; DATA_FINGERPRINT_SIZE] {
+    let salt = Sha256::digest(salt).to_vec();
+
+    let params = Params::new(
+        KDF_M_COST_KIB_FOR_HASH,
+        KDF_T_COST_FOR_HASH,
+        KDF_P_COST,
+        Some(DATA_FINGERPRINT_SIZE),
+    )
+    .expect("Invalid Argon2 params");
+
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+
+    let mut output = [0u8; DATA_FINGERPRINT_SIZE];
+    argon2
+        .hash_password_into(password, &salt, &mut output)
+        .expect("Argon2 hashing failed");
+
+    output
 }
 
-fn get_ciphertext(encrypted_data: &[u8]) -> Result<&[u8], ring::error::Unspecified> {
-    if encrypted_data.len() < SALT_LEN + NONCE_LEN {
-        return Err(ring::error::Unspecified);
-    }
-    Ok(&encrypted_data[SALT_LEN + NONCE_LEN..])
+pub fn get_master_password_check(master_password: &[u8]) -> [u8; KDF_OUTPUT_LEN] {
+    let params = Params::new(
+        KDF_M_COST_KIB_FOR_MASTER_PASSWORD,
+        KDF_T_COST_FOR_MASTER_PASSWORD,
+        KDF_P_COST,
+        Some(KDF_OUTPUT_LEN),
+    )
+    .expect("Invalid Argon2 params");
+
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+
+    let mut output = [0u8; KDF_OUTPUT_LEN];
+    argon2
+        .hash_password_into(master_password, MASTER_PASSWORD_CHECK_SALT, &mut output)
+        .expect("Argon2 hashing failed");
+
+    output
 }
 
-pub fn encrypt(data: &[u8], password: &[u8]) -> Result<Vec<u8>, ring::error::Unspecified> {
-    let salt = gen_salt();
-    let sealing_key = gen_key(password, &salt)?;
-    let nonce = gen_nonce();
+pub fn derive_encryption_key(master_password: &[u8], salt: &[u8]) -> [u8; KDF_OUTPUT_LEN] {
+    let salt = Sha256::digest(salt).to_vec();
 
-    let mut in_out = data.to_vec();
-    sealing_key.seal_in_place_append_tag(
-        aead::Nonce::assume_unique_for_key(nonce),
-        aead::Aad::empty(),
-        &mut in_out,
-    )?;
+    let params = Params::new(KDF_M_COST_KIB, KDF_T_COST, KDF_P_COST, Some(KDF_OUTPUT_LEN))
+        .expect("Invalid Argon2 params");
 
-    let mut result = salt.to_vec();
-    result.extend_from_slice(&nonce);
-    result.extend_from_slice(&in_out);
-    Ok(result)
-}
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
 
-pub fn decrypt(
-    encrypted_data: &[u8],
-    password: &[u8],
-) -> Result<Vec<u8>, ring::error::Unspecified> {
-    let salt = get_salt(encrypted_data)?;
-    let nonce = get_nonce(encrypted_data)?;
-    let ciphertext = get_ciphertext(encrypted_data)?;
-    let opening_key = gen_key(password, &salt)?;
+    let mut output = [0u8; KDF_OUTPUT_LEN];
+    argon2
+        .hash_password_into(master_password, &salt, &mut output)
+        .expect("Argon2 hashing failed");
 
-    let mut in_out = ciphertext.to_vec();
-    opening_key.open_in_place(
-        aead::Nonce::assume_unique_for_key(nonce),
-        aead::Aad::empty(),
-        &mut in_out,
-    )?;
-
-    in_out.truncate(in_out.len() - aead::AES_256_GCM.tag_len());
-    Ok(in_out)
+    output
 }
