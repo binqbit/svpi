@@ -109,3 +109,70 @@ impl PasswordManager {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{data_mgr::DataInterfaceType, seg_mgr::DataType};
+
+    fn setup_mgr() -> PasswordManager {
+        let mut mgr =
+            PasswordManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
+        mgr.get_data_manager()
+            .init_device(1024)
+            .expect("init device");
+        mgr
+    }
+
+    #[test]
+    fn save_read_plain_password() {
+        let mut mgr = setup_mgr();
+        assert!(mgr.save_password("name", "secret", None).unwrap());
+        let read = mgr
+            .read_password("name", || String::new())
+            .expect("read password");
+        assert_eq!(read, "secret");
+    }
+
+    #[test]
+    fn save_read_encrypted_password() {
+        let mut mgr = setup_mgr();
+        let key = "enc_key".to_string();
+        assert!(mgr
+            .save_password("name", "secret", Some(key.clone()))
+            .unwrap());
+        let read = mgr
+            .read_password("name", || key.clone())
+            .expect("read password");
+        assert_eq!(read, "secret");
+    }
+
+    #[test]
+    fn remove_password_deletes_segment() {
+        let mut mgr = setup_mgr();
+        mgr.save_password("name", "secret", None).unwrap();
+        mgr.remove_password("name").unwrap();
+        assert!(mgr.0.find_segment_by_name("name").is_none());
+    }
+
+    #[test]
+    fn rename_password_changes_name() {
+        let mut mgr = setup_mgr();
+        mgr.save_password("old", "data", None).unwrap();
+        mgr.rename_password("old", "new").unwrap();
+        assert!(mgr.0.find_segment_by_name("old").is_none());
+        let data = mgr
+            .read_password("new", || String::new())
+            .expect("read renamed");
+        assert_eq!(data, "data");
+    }
+
+    #[test]
+    fn change_data_type_updates_segment() {
+        let mut mgr = setup_mgr();
+        mgr.save_password("hex", "hi", None).unwrap();
+        mgr.change_data_type("hex", DataType::Hex).unwrap();
+        let seg = mgr.0.find_segment_by_name("hex").unwrap();
+        assert_eq!(seg.info.data_type, DataType::Hex);
+    }
+}
