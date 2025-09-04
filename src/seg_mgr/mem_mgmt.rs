@@ -64,7 +64,10 @@ impl SegmentManager {
 
 #[cfg(test)]
 mod tests {
-    use crate::{data_mgr::DataInterfaceType, seg_mgr::{DataType, SegmentManager}};
+    use crate::{
+        data_mgr::DataInterfaceType,
+        seg_mgr::{DataType, SegmentManager},
+    };
 
     fn setup_mgr() -> SegmentManager {
         let mut mgr =

@@ -158,7 +158,7 @@ impl Segment {
 
     pub fn remove(&mut self) -> Result<(), SegmentError> {
         let zero_data = vec![0u8; self.info.size as usize];
-       self.disable();
+        self.disable();
         self.write_data(&zero_data)?;
         self.update_meta()
     }

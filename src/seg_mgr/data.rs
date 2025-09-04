@@ -437,18 +437,12 @@ mod tests {
 
     #[test]
     fn from_str_infer_detects_type() {
-        assert_eq!(
-            Data::from_str_infer("6869"),
-            Data::Hex("6869".to_string())
-        );
+        assert_eq!(Data::from_str_infer("6869"), Data::Hex("6869".to_string()));
         assert_eq!(
             Data::from_str_infer("aGk="),
             Data::Base64("aGk=".to_string())
         );
-        assert_eq!(
-            Data::from_str_infer("8wr"),
-            Data::Base58("8wr".to_string())
-        );
+        assert_eq!(Data::from_str_infer("8wr"), Data::Base58("8wr".to_string()));
         assert_eq!(
             Data::from_str_infer("hello"),
             Data::Plain("hello".to_string())
@@ -493,7 +487,10 @@ mod tests {
         let fp2 = DataFingerprint::get_fingerprint(data);
         assert_eq!(fp, fp2);
 
-        let existing = vec![DataFingerprint { fingerprint: fp, probe: 0 }];
+        let existing = vec![DataFingerprint {
+            fingerprint: fp,
+            probe: 0,
+        }];
         let unique = DataFingerprint::find_unique(data, &existing);
         assert_eq!(unique.fingerprint, fp);
         assert_eq!(unique.probe, 1);
@@ -542,7 +539,14 @@ mod tests {
         assert_eq!(info1.size, data1.len() as u32);
         assert_eq!(info1.data_type, DataType::Plain);
 
-        let info2 = DataInfo::new("name2", 2, data1, DataType::Plain, None, &[info1.fingerprint]);
+        let info2 = DataInfo::new(
+            "name2",
+            2,
+            data1,
+            DataType::Plain,
+            None,
+            &[info1.fingerprint],
+        );
         assert_eq!(info2.fingerprint.fingerprint, info1.fingerprint.fingerprint);
         assert_eq!(info2.fingerprint.probe, 1);
     }

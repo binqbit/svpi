@@ -161,8 +161,8 @@ mod tests {
     use crate::{data_mgr::DataInterfaceType, seg_mgr::DataType};
 
     fn setup_mgr() -> PasswordManager {
-        let mut mgr = PasswordManager::from_device_type(DataInterfaceType::Memory(vec![]))
-            .expect("init");
+        let mut mgr =
+            PasswordManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
         mgr.get_data_manager()
             .init_device(1024)
             .expect("init device");

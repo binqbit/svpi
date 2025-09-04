@@ -285,9 +285,11 @@ mod tests {
         let mut mgr = setup_mgr();
         mgr.save_password("a", "1", None).unwrap();
         let dump = mgr.get_data_manager().get_dump().unwrap();
-        let mut restored =
-            PasswordManager::try_load(DataInterfaceType::Memory(dump)).unwrap();
-        assert!(restored.get_data_manager().find_segment_by_name("a").is_some());
+        let mut restored = PasswordManager::try_load(DataInterfaceType::Memory(dump)).unwrap();
+        assert!(restored
+            .get_data_manager()
+            .find_segment_by_name("a")
+            .is_some());
     }
 
     #[test]
@@ -320,8 +322,7 @@ mod tests {
         for line in contents.lines() {
             let formatted = FormattedData::decode(line).unwrap();
             let data = formatted.data.to_bytes().unwrap();
-            mgr2
-                .get_data_manager()
+            mgr2.get_data_manager()
                 .set_segment(
                     &formatted.name,
                     &data,
@@ -331,8 +332,14 @@ mod tests {
                 .unwrap();
         }
 
-        assert!(mgr2.get_data_manager().find_segment_by_name("one").is_some());
-        assert!(mgr2.get_data_manager().find_segment_by_name("two").is_some());
+        assert!(mgr2
+            .get_data_manager()
+            .find_segment_by_name("one")
+            .is_some());
+        assert!(mgr2
+            .get_data_manager()
+            .find_segment_by_name("two")
+            .is_some());
 
         let _ = fs::remove_file(temp);
     }

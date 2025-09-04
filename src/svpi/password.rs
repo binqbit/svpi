@@ -126,9 +126,7 @@ mod tests {
     fn add_encryption_key_creates_segment() {
         let mut mgr = setup_mgr();
         mgr.set_master_password("master").unwrap();
-        assert!(mgr
-            .add_encryption_key("master", "key1", "pwd")
-            .unwrap());
+        assert!(mgr.add_encryption_key("master", "key1", "pwd").unwrap());
         let seg = mgr.get_data_manager().find_segment_by_name("key1").unwrap();
         assert_eq!(seg.info.data_type, DataType::EncryptionKey);
     }

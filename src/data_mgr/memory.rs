@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn test_memory_data_manager() {
-        let mut memory_mgr = MemoryDataManager::new(vec![0; 1024]);
+        let memory_mgr = MemoryDataManager::new(vec![0; 1024]);
         let write_data = vec![1, 2, 3, 4, 5];
         memory_mgr.write_data(100, &write_data).unwrap();
 
