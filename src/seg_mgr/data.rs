@@ -285,17 +285,31 @@ impl FormattedData {
     pub fn from(
         name: String,
         data: String,
-        data_type: String,
+        data_type: Option<String>,
         password_fingerprint: Option<String>,
     ) -> Result<Self, DataError> {
         if name.len() > DATA_NAME_SIZE {
             return Err(DataError::InvalidData);
         }
 
-        let data_type = DataType::from_str(&data_type)?;
-        let data = data_type
-            .from_string(&data)
-            .map_err(|_| DataError::InvalidData)?;
+        let (data_type, data) = if let Some(data_type) = data_type {
+            let data_type = DataType::from_str(&data_type)?;
+            let data = if password_fingerprint.is_some() {
+                DataType::Hex
+                    .from_string(&data)
+                    .map_err(|_| DataError::InvalidData)?
+            } else {
+                data_type
+                    .from_string(&data)
+                    .map_err(|_| DataError::InvalidData)?
+            };
+            (data_type, data)
+        } else {
+            let data = Data::from_str_infer(&data);
+            let data_type = data.get_type();
+            (data_type, data)
+        };
+
         let password_fingerprint = if let Some(pf) = password_fingerprint {
             Some(DataFingerprint::from_str(&pf)?.fingerprint)
         } else {
@@ -314,14 +328,18 @@ impl FormattedData {
         let name = self.name.clone();
         let data = self.data.to_string()?;
         let data_type = self.data_type.to_string();
-        let password_fingerprint = self
-            .password_fingerprint
-            .map_or_else(String::new, |pf| DataFingerprint::from(pf).to_string());
 
-        Ok(format!(
-            "{} = data:application/vnd.binqbit.svpi;{}{},{}",
-            name, password_fingerprint, data_type, data
-        ))
+        if let Some(pf) = self.password_fingerprint {
+            Ok(format!(
+                "{} = data:application/vnd.binqbit.svpi;fp={};{},{}",
+                name,
+                DataFingerprint::from(pf).to_string(),
+                data_type,
+                data
+            ))
+        } else {
+            Ok(format!("{} = {}", name, data))
+        }
     }
 
     pub fn decode(data: &str) -> Result<Self, DataError> {
@@ -329,19 +347,16 @@ impl FormattedData {
         let name = name.trim().to_string();
         let parts = data.split(";").collect::<Vec<&str>>();
 
-        let (password_fingerprint, data_type, data) = if parts.len() == 3 {
+        let (password_fingerprint, data_type, data) = if parts.len() == 1 {
+            (None, None, parts[0].trim().to_string())
+        } else {
             let password_fingerprint = parts[1].trim_start_matches("fp=");
             let (data_type, data) = parts[2].split_once(",").ok_or(DataError::InvalidData)?;
             (
                 Some(password_fingerprint.to_string()),
-                data_type.to_string(),
+                Some(data_type.to_string()),
                 data.to_string(),
             )
-        } else if parts.len() == 2 {
-            let (data_type, data) = parts[1].split_once(",").ok_or(DataError::InvalidData)?;
-            (None, data_type.to_string(), data.to_string())
-        } else {
-            return Err(DataError::InvalidData);
         };
 
         FormattedData::from(name, data, data_type, password_fingerprint)
