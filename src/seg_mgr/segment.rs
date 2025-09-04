@@ -158,8 +158,42 @@ impl Segment {
 
     pub fn remove(&mut self) -> Result<(), SegmentError> {
         let zero_data = vec![0u8; self.info.size as usize];
-        self.disable();
+       self.disable();
         self.write_data(&zero_data)?;
         self.update_meta()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{data_mgr::DataInterfaceType, seg_mgr::SegmentManager};
+
+    fn setup_mgr() -> SegmentManager {
+        let mut mgr =
+            SegmentManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
+        mgr.init_device(256).expect("device");
+        mgr
+    }
+
+    #[test]
+    fn segment_basic_operations() {
+        let mut mgr = setup_mgr();
+        mgr.set_segment("a", b"hi", DataType::Plain, None).unwrap();
+
+        {
+            let seg = mgr.find_segment_by_name("a").unwrap();
+            assert_eq!(seg.read_data().unwrap(), Data::Plain("hi".to_string()));
+            seg.rename("b").unwrap();
+        }
+
+        assert!(mgr.find_segment_by_name("a").is_none());
+        {
+            let seg = mgr.find_segment_by_name("b").unwrap();
+            seg.set_type(DataType::Hex).unwrap();
+            assert_eq!(seg.info.data_type, DataType::Hex);
+            seg.remove().unwrap();
+            assert!(!seg.is_active());
+        }
     }
 }

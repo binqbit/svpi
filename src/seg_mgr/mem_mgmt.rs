@@ -61,3 +61,34 @@ impl SegmentManager {
         Ok(optimized_size)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{data_mgr::DataInterfaceType, seg_mgr::{DataType, SegmentManager}};
+
+    fn setup_mgr() -> SegmentManager {
+        let mut mgr =
+            SegmentManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
+        mgr.init_device(256).expect("device");
+        mgr
+    }
+
+    #[test]
+    fn optimize_moves_segments() {
+        let mut mgr = setup_mgr();
+        let start = mgr.start_data_address();
+        mgr.set_segment("a", b"foo", DataType::Plain, None).unwrap();
+        mgr.set_segment("b", b"bar", DataType::Plain, None).unwrap();
+        let addr_a = mgr.find_segment_by_name("a").unwrap().info.address;
+        let addr_b = mgr.find_segment_by_name("b").unwrap().info.address;
+        assert_eq!(addr_a, start);
+        assert_eq!(addr_b, start + 3);
+        {
+            let seg = mgr.find_segment_by_name("a").unwrap();
+            seg.remove().unwrap();
+        }
+        let _optimized = mgr.optimize_segments().unwrap();
+        let addr_b_after = mgr.find_segment_by_name("b").unwrap().info.address;
+        assert_eq!(addr_b_after, start);
+    }
+}
