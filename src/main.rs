@@ -1,315 +1,119 @@
+use seg_mgr::ARCHITECTURE_VERSION;
+
+use crate::utils::args;
+
 // mod api;
-mod seg_mgmt;
-mod spdm;
+mod data_mgr;
+mod pass_mgr;
+mod seg_mgr;
 mod svpi;
 mod utils;
-
-use arboard::Clipboard;
-use seg_mgmt::ARCHITECTURE_VERSION;
-use spdm::SerialPortDataManager;
-use utils::args;
-
-use svpi::result::Result;
 
 fn print_info() {
     println!("# Secure Vault Personal Information (SVPI)");
     println!("{}", "=".repeat(59));
     println!("| {:32} | {:20} |", "Info", "Value");
     println!("{}", "=".repeat(59));
-    println!("| {:32} | {:>20} |", "Version", env!("CARGO_PKG_VERSION"));
+    println!(
+        "| {:32} | {:>20} |",
+        "App Version",
+        env!("CARGO_PKG_VERSION")
+    );
     println!("{}", "-".repeat(59));
     println!(
         "| {:32} | {:20} |",
-        "App Architecture Version", ARCHITECTURE_VERSION
+        "Architecture Version", ARCHITECTURE_VERSION
     );
     println!("{}", "-".repeat(59));
-    match SerialPortDataManager::connect_to_device(true) {
-        Ok(mut spdm) => {
-            let msg = b"Hello, World!";
-            if spdm.test(msg).map(|data| data != msg).unwrap_or(true) {
-                return;
-            }
-
-            let mut seg_mgmt = spdm.into_segment_manager();
-            if seg_mgmt
-                .check_init_data()
-                .map(|check| !check)
-                .unwrap_or(true)
-            {
-                println!("Device not initialized!");
-                return;
-            }
-
-            match seg_mgmt.get_version() {
-                Ok(version) => {
-                    println!("| {:32} | {:20} |", "Device Architecture Version", version);
-                    println!("{}", "-".repeat(59));
-                }
-                Err(_) => {
-                    return;
-                }
-            }
-
-            match seg_mgmt.get_memory_size() {
-                Ok(memory_size) => {
-                    println!(
-                        "| {:32} | {:>20} |",
-                        "Device Memory Size",
-                        format!("{} bytes", memory_size)
-                    );
-                    println!("{}", "-".repeat(59));
-                }
-                Err(_) => {
-                    return;
-                }
-            }
-        }
-        Err(err) => {
-            println!(
-                "The device is not connected to receive information: {:?}",
-                err
-            );
-        }
-        _ => {}
-    }
 }
 
 fn print_help() {
     print_info();
 
+    println!();
+
     println!("{}", "=".repeat(107));
     println!("| {:50} | {:50} |", "Command", "Description");
     println!("{}", "=".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi init / i <memory_size>", "Initialize the device for the desired architecture"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi format / f", "Format the data in the device"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi dump / d <file_name>", "Dump the data from the device to a file"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi load / ld <file_name>", "Load dump data from a file to the device"
-    );
-    println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi list / l", "Print all data list");
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi set / s <name> <data>", "Set data"
-    );
-    println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi get / g <name>", "Get data");
-    println!("{}", "-".repeat(107));
-    println!("| {:50} | {:50} |", "svpi remove / r <name>", "Remove data");
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi optimize / o", "Optimize the memory"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi export / e [--password] <file_name>", "Export data to a file with decryption option"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi import / m [--password] <file_name>",
-        "Import data from a file with encryption option"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi set-password / sp", "Set root password"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi reset-password / rp", "Reset root password"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi get-password / gp", "Get root password"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi check", "Check if the device supports SRWP protocol"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi version / v", "Print the version of the application"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi help / h", "Print this help message"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi api-server", "Start the API server"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi api-chrome", "Start the Chrome app"
-    );
-    println!("{}", "-".repeat(107));
+
+    for (cmd, desc) in svpi::HELP_COMMANDS {
+        println!("| {:50} | {:50} |", cmd, desc);
+        println!("{}", "-".repeat(107));
+    }
+
+    println!();
 
     println!("{}", "=".repeat(107));
     println!("| {:50} | {:50} |", "Flags", "Description");
     println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi <command> [flags...] [params...]", "How to use flags"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi [op] --password / -p", "Use password for encryption/decryption"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi set --p2 / -rp2", "Use password with confirmation for encryption"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi set --root-password / -rp", "Use root password for encryption/decryption"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi set/get --clipboard / -c", "Copy data to/from clipboard"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi --view / -v", "View the data in the terminal"
-    );
-    println!("{}", "-".repeat(107));
-    println!(
-        "| {:50} | {:50} |",
-        "svpi api-server --auto-exit / -ae",
-        "Automatically exit the API server after device disconnection"
-    );
-    println!("{}", "-".repeat(107));
+
+    for (flag, desc) in svpi::HELP_FLAGS {
+        println!("| {:50} | {:50} |", flag, desc);
+        println!("{}", "-".repeat(107));
+    }
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
     match args::get_command() {
         Some(cmd) => match cmd.as_str() {
             "init" | "i" => {
-                let memory_size = std::env::args()
-                    .nth(2)
-                    .expect("Memory size is required!")
-                    .parse::<u32>()
-                    .expect("Memory size must be a number!");
-                svpi::init_segments(memory_size)?;
-            }
-            "format" | "f" => {
-                svpi::format_data()?;
-            }
-            "dump" | "d" => {
-                let file_name = args::get_param(0).expect("File name is required!");
-                svpi::save_dump(&file_name)?;
-            }
-            "load" | "ld" => {
-                let file_name = args::get_param(0).expect("File name is required!");
-                svpi::load_dump(&file_name)?;
-            }
-            "list" | "l" => {
-                svpi::print_segments_meta()?;
-            }
-            "set" | "s" => {
-                let name = args::get_param(0).expect("Name is required!");
-                let clipboard = args::check_flag(vec!["--clipboard", "-c"]);
-                let data = if clipboard {
-                    let mut clipboard =
-                        Clipboard::new().expect("Failed to create clipboard instance!");
-                    clipboard
-                        .get_text()
-                        .expect("Failed to get text from clipboard!")
-                } else {
-                    args::get_param(1).expect("Data is required!")
-                };
-                svpi::set_segment(&name, &data)?;
-            }
-            "get" | "g" => {
-                let name = args::get_param(0).expect("Name is required!");
-                let data = svpi::get_segment(&name)?;
-                if let Some(data) = data {
-                    let clipboard = args::check_flag(vec!["--clipboard", "-c"]);
-                    if clipboard {
-                        let mut clipboard =
-                            Clipboard::new().expect("Failed to create clipboard instance!");
-                        clipboard
-                            .set_text(data)
-                            .expect("Failed to set text to clipboard!");
-                        println!("Data copied to clipboard!");
-                    }
-                }
-            }
-            "remove" | "r" => {
-                let name = args::get_param(0).expect("Name is required!");
-                svpi::remove_segment(&name)?;
-            }
-            "optimize" | "o" => {
-                svpi::optimize()?;
-            }
-            "export" | "e" => {
-                let file_name = args::get_param(0).expect("File name is required!");
-                svpi::export(&file_name)?;
-            }
-            "import" | "m" => {
-                let file_name = args::get_param(0).expect("File name is required!");
-                svpi::import(&file_name)?;
-            }
-            "set-password" | "sp" => {
-                svpi::set_root_password()?;
-            }
-            "reset-password" | "rp" => {
-                svpi::reset_root_password()?;
-            }
-            "get-password" | "gp" => {
-                let password = svpi::get_root_password()?;
-                if let Some(password) = password {
-                    let clipboard = args::check_flag(vec!["--clipboard", "-c"]);
-                    if clipboard {
-                        let mut clipboard =
-                            Clipboard::new().expect("Failed to create clipboard instance!");
-                        clipboard
-                            .set_text(password)
-                            .expect("Failed to set text to clipboard!");
-                        println!("Password copied to clipboard!");
-                    }
-                }
+                svpi::device::init_device();
             }
             "check" => {
-                let mut spdm =
-                    SerialPortDataManager::connect_to_device(true).map_err(Into::into)?;
-                let msg = b"Hello, World!";
-                let data = spdm.test(msg).expect("Failed to test device!");
-                if data == msg {
-                    println!("Device supports SRWP protocol");
-                } else {
-                    println!("Device does not support SRWP protocol");
-                }
+                svpi::device::check_device();
             }
+            "format" | "f" => {
+                svpi::device::format_device();
+            }
+            "optimize" | "o" => {
+                svpi::device::optimize_device();
+            }
+            "export" | "e" => {
+                svpi::device::export_data();
+            }
+            "import" | "m" => {
+                svpi::device::import_data();
+            }
+            "dump" | "d" => {
+                svpi::device::save_dump();
+            }
+            "load" | "ld" => {
+                svpi::device::load_dump();
+            }
+
+            "set-master-password" | "set-master" => {
+                svpi::password::set_master_password();
+            }
+            "reset-master-password" | "reset-master" => {
+                svpi::password::reset_master_password();
+            }
+            "check-master-password" | "check-master" => {
+                svpi::password::check_master_password();
+            }
+            "add-encryption-key" | "add-key" => {
+                svpi::password::add_encryption_key();
+            }
+
+            "list" | "l" => {
+                svpi::data::get_data_list();
+            }
+            "set" | "s" => {
+                svpi::data::save_data();
+            }
+            "get" | "g" => {
+                svpi::data::get_data();
+            }
+            "remove" | "r" => {
+                svpi::data::remove_data();
+            }
+            "rename" | "rn" => {
+                svpi::data::rename_data();
+            }
+            "change-data-type" | "cdt" => {
+                svpi::data::change_data_type();
+            }
+
             "version" | "v" => {
                 print_info();
             }
@@ -334,6 +138,4 @@ async fn main() -> Result<()> {
             print_help();
         }
     }
-
-    Ok(())
 }
