@@ -71,7 +71,7 @@ pub const HELP_FLAGS: &[(&str, &str)] = &[
         "Automatically exit the API server after device disconnection",
     ),
     (
-        "svpi <command> --file / -f <file_name>",
+        "svpi <command> --file=<file_name>",
         "Open a file password storage",
     ),
 ];
