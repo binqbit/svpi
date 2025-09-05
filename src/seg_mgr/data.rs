@@ -531,14 +531,15 @@ mod tests {
         assert_eq!(decoded.password_fingerprint, None);
 
         let fp_hex = "cafebabe";
+        let data = "7777";
         let encoded_with_fp = format!(
-            "name = data:application/vnd.binqbit.svpi;fp={};base64,Zm9v",
-            fp_hex
+            "name = data:application/vnd.binqbit.svpi;fp={};base64,{}",
+            fp_hex, data
         );
         let decoded = FormattedData::decode(&encoded_with_fp).unwrap();
         assert_eq!(decoded.name, "name");
         assert_eq!(decoded.data_type, DataType::Base64);
-        assert_eq!(decoded.data, Data::Base64("Zm9v".to_string()));
+        assert_eq!(decoded.data, Data::Hex(data.to_string()));
         assert_eq!(
             decoded.password_fingerprint,
             Some(DataFingerprint::from_str(fp_hex).unwrap().fingerprint)
