@@ -155,6 +155,27 @@ pub fn change_data_type() {
     println!("Data '{}' changed to type '{:?}'", name, new_data_type);
 }
 
+pub fn change_password() {
+    let name = args::get_param_by_id(0).expect("Name is required");
+
+    let mut pass_mgr =
+        PasswordManager::load_from_args_or_default().expect("Failed to load password manager");
+
+    let data = pass_mgr
+        .read_password(&name, || {
+            terminal::get_password(None).expect("Failed to get password")
+        })
+        .expect("Failed to read data");
+
+    let new_password = terminal::get_password(Some("new password: "));
+
+    pass_mgr
+        .save_password(&name, &data, new_password)
+        .expect("Failed to change password");
+
+    println!("Password for data '{}' changed!", name);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

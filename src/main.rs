@@ -113,6 +113,9 @@ async fn main() {
             "change-data-type" | "cdt" => {
                 svpi::data::change_data_type();
             }
+            "change-password" | "cp" => {
+                svpi::data::change_password();
+            }
 
             "version" | "v" => {
                 print_info();

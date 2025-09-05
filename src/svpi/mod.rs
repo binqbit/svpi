@@ -45,6 +45,7 @@ pub const HELP_COMMANDS: &[(&str, &str)] = &[
         "svpi change-data-type / cdt <name> <new_data_type>",
         "Change data type",
     ),
+    ("svpi change-password / cp <name>", "Change data password"),
     ("svpi version / v", "Print the version of the application"),
     ("svpi help / h", "Print this help message"),
     ("svpi api-server", "Start the API server"),
