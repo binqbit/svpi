@@ -63,7 +63,8 @@ pub fn save_data() {
             .get_text()
             .expect("Failed to get text from clipboard!")
     };
-    let encryption_key = terminal::get_password(None);
+    let encryption_key =
+        args::get_param_by_flag("--password").or_else(|| terminal::get_password(None));
 
     let mut pass_mgr =
         PasswordManager::load_from_args_or_default().expect("Failed to load password manager");
@@ -88,7 +89,9 @@ pub fn get_data() {
 
     let data = pass_mgr
         .read_password(&name, || {
-            terminal::get_password(None).expect("Failed to get password")
+            args::get_param_by_flag("--password")
+                .or_else(|| terminal::get_password(None))
+                .expect("Failed to get password")
         })
         .expect("Failed to read data");
 
@@ -163,11 +166,14 @@ pub fn change_password() {
 
     let data = pass_mgr
         .read_password(&name, || {
-            terminal::get_password(None).expect("Failed to get password")
+            args::get_param_by_flag("--old-password")
+                .or_else(|| terminal::get_password(None))
+                .expect("Failed to get password")
         })
         .expect("Failed to read data");
 
-    let new_password = terminal::get_password(Some("new password"));
+    let new_password = args::get_param_by_flag("--new-password")
+        .or_else(|| terminal::get_password(Some("new password")));
 
     pass_mgr
         .save_password(&name, &data, new_password)

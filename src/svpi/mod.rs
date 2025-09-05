@@ -53,8 +53,19 @@ pub const HELP_COMMANDS: &[(&str, &str)] = &[
 ];
 
 pub const HELP_FLAGS: &[(&str, &str)] = &[
-    ("svpi <command> [params...] [flags...]", "How to use flags"),
     ("svpi get --clipboard / -c", "Copy data to clipboard"),
+    (
+        "svpi get <name> --password=<password>",
+        "Provide password via command line",
+    ),
+    (
+        "svpi set <name> <value> --password=<password>",
+        "Provide password via command line",
+    ),
+    (
+        "svpi change-password <name> --old-password=<old_password> --new-password=<new_password>",
+        "Provide old and new passwords via command line",
+    ),
     (
         "svpi api-server --auto-exit / -ae",
         "Automatically exit the API server after device disconnection",
