@@ -167,7 +167,7 @@ pub fn change_password() {
         })
         .expect("Failed to read data");
 
-    let new_password = terminal::get_password(Some("new password: "));
+    let new_password = terminal::get_password(Some("new password"));
 
     pass_mgr
         .save_password(&name, &data, new_password)

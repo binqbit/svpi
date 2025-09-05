@@ -18,7 +18,7 @@ impl SerialPortExt for SerialPortDataManager {
             SerialPortDataManager::find_devices().map_err(|_| DeviceError::DeviceNotFound)?;
 
         for device in devices {
-            if let Ok(mut port) = device.connect() {
+            if let Ok(port) = device.connect() {
                 if let Ok(result) = port.test(b"hello_world") {
                     if result.as_slice() == b"hello_world" {
                         return Ok(port);
