@@ -12,10 +12,11 @@ mod metadata;
 mod segment;
 
 pub use data::*;
+pub use encryption::*;
 pub use metadata::*;
 pub use segment::*;
 
-pub const ARCHITECTURE_VERSION: u32 = 6;
+pub const ARCHITECTURE_VERSION: u32 = 7;
 pub const METADATA_SIZE: usize = std::mem::size_of::<Metadata>();
 pub const SEGMENT_INFO_SIZE: usize = std::mem::size_of::<DataInfo>();
 

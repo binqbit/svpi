@@ -2,7 +2,7 @@ use base58::{FromBase58, ToBase58};
 use base64::Engine;
 use borsh_derive::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
-use sha2::Digest;
+use sha2::{Digest, Sha256};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -219,15 +219,9 @@ impl DataFingerprint {
     }
 
     pub fn get_fingerprint(data: &[u8]) -> [u8; DATA_FINGERPRINT_SIZE] {
-        let mut hasher = sha2::Sha256::new();
-        hasher.update(data);
-        let hash = hasher.finalize();
-
-        let fingerprint: [u8; DATA_FINGERPRINT_SIZE] = hash[..DATA_FINGERPRINT_SIZE]
+        Sha256::digest(data)[..DATA_FINGERPRINT_SIZE]
             .try_into()
-            .expect("Hash is not long enough for fingerprint");
-
-        fingerprint
+            .expect("Slice with incorrect length")
     }
 
     pub fn find_unique(data: &[u8], fingerprints: &[DataFingerprint]) -> Self {

@@ -114,7 +114,7 @@ pub fn export_data() {
                 terminal::get_password(Some(&format!("password for '{}'", name)))
             {
                 let password = pass_mgr
-                    .get_encryption_key(&password)
+                    .get_encryption_key(&password, Some(fingerprint))
                     .expect("Failed to get encryption key");
                 passwords.push(password);
             }

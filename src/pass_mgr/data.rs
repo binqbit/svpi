@@ -14,7 +14,7 @@ impl PasswordManager {
         let data_type = data.get_type();
 
         let (data, password_fingerprint) = if let Some(encryption_key) = encryption_key {
-            let (fingerprint, encryption_key) = self.get_encryption_key(&encryption_key)?;
+            let (fingerprint, encryption_key) = self.get_encryption_key(&encryption_key, None)?;
             let data = data
                 .encrypt(&encryption_key)
                 .map_err(PasswordManagerError::EncryptionError)?;
@@ -53,14 +53,15 @@ impl PasswordManager {
             .map_err(PasswordManagerError::ReadPasswordError)?;
         let data_type = segment.info.data_type;
 
-        let is_encrypted = segment.info.password_fingerprint.is_some();
+        let password_fingerprint = segment.info.password_fingerprint;
 
-        if is_encrypted {
+        if password_fingerprint.is_some() {
             let data = data.to_bytes().map_err(|err| {
                 PasswordManagerError::ReadPasswordError(SegmentError::DataError(err))
             })?;
             let encryption_key = get_encryption_key();
-            let (_, encryption_key) = self.get_encryption_key(&encryption_key)?;
+            let (_, encryption_key) =
+                self.get_encryption_key(&encryption_key, password_fingerprint)?;
             let data = data_type.decrypt(&data, &encryption_key).map_err(|err| {
                 PasswordManagerError::ReadPasswordError(SegmentError::DataError(err))
             })?;
