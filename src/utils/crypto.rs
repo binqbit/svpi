@@ -11,22 +11,22 @@ pub const KDF_OUTPUT_LEN: usize = 32;
 pub const LOW_KDF_P_COST: u32 = 1;
 pub const LOW_KDF_T_COST: u32 = 1;
 #[cfg(not(test))]
-pub const LOW_KDF_M_COST_KIB: u32 = 65_536;
+pub const LOW_KDF_M_COST_KIB: u32 = 131_072;
 
 pub const MEDIUM_KDF_P_COST: u32 = 2;
-pub const MEDIUM_KDF_T_COST: u32 = 2;
+pub const MEDIUM_KDF_T_COST: u32 = 4;
 #[cfg(not(test))]
-pub const MEDIUM_KDF_M_COST_KIB: u32 = 262_144;
+pub const MEDIUM_KDF_M_COST_KIB: u32 = 524_288;
 
-pub const STRONG_KDF_P_COST: u32 = 2;
-pub const STRONG_KDF_T_COST: u32 = 4;
+pub const STRONG_KDF_P_COST: u32 = 4;
+pub const STRONG_KDF_T_COST: u32 = 8;
 #[cfg(not(test))]
-pub const STRONG_KDF_M_COST_KIB: u32 = 524_288;
+pub const STRONG_KDF_M_COST_KIB: u32 = 1_048_576;
 
 pub const HARDENED_KDF_P_COST: u32 = 4;
-pub const HARDENED_KDF_T_COST: u32 = 8;
+pub const HARDENED_KDF_T_COST: u32 = 16;
 #[cfg(not(test))]
-pub const HARDENED_KDF_M_COST_KIB: u32 = 524_288;
+pub const HARDENED_KDF_M_COST_KIB: u32 = 1_048_576;
 
 #[cfg(test)]
 pub const LOW_KDF_M_COST_KIB: u32 = 64;
