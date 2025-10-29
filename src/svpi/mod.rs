@@ -36,6 +36,11 @@ pub const HELP_COMMANDS: &[(&str, &str)] = &[
         "svpi add-encryption-key / add-key <name>",
         "Add encryption key",
     ),
+    ("svpi link-key / link <name>", "Link encryption key"),
+    (
+        "svpi sync-keys / sync",
+        "Synchronize encryption keys fingerprints",
+    ),
     ("svpi list / l", "Print all data list"),
     ("svpi set / s <name> <data>", "Set data"),
     ("svpi get / g <name>", "Get data"),

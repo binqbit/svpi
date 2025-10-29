@@ -94,6 +94,12 @@ async fn main() {
             "add-encryption-key" | "add-key" => {
                 svpi::password::add_encryption_key();
             }
+            "link-key" | "link" => {
+                svpi::password::link_key();
+            }
+            "sync-keys" | "sync" => {
+                svpi::password::sync_keys();
+            }
 
             "list" | "l" => {
                 svpi::data::get_data_list();
