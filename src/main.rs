@@ -1,150 +1,63 @@
-use seg_mgr::ARCHITECTURE_VERSION;
+use clap::{error::ErrorKind, Parser};
 
-use crate::utils::args;
+use crate::{cli::Mode, utils::response::SvpiResponse};
 
-// mod api;
+mod api;
+mod cli;
 mod data_mgr;
 mod pass_mgr;
+mod protocol;
 mod seg_mgr;
 mod svpi;
 mod utils;
 
-fn print_info() {
-    println!("# Secure Vault Personal Information (SVPI)");
-    println!("{}", "=".repeat(59));
-    println!("| {:32} | {:20} |", "Info", "Value");
-    println!("{}", "=".repeat(59));
-    println!(
-        "| {:32} | {:>20} |",
-        "App Version",
-        env!("CARGO_PKG_VERSION")
-    );
-    println!("{}", "-".repeat(59));
-    println!(
-        "| {:32} | {:20} |",
-        "Architecture Version", ARCHITECTURE_VERSION
-    );
-    println!("{}", "-".repeat(59));
-}
-
-fn print_help() {
-    print_info();
-
-    println!();
-
-    println!("{}", "=".repeat(107));
-    println!("| {:50} | {:50} |", "Command", "Description");
-    println!("{}", "=".repeat(107));
-
-    for (cmd, desc) in svpi::HELP_COMMANDS {
-        println!("| {:50} | {:50} |", cmd, desc);
-        println!("{}", "-".repeat(107));
-    }
-
-    println!();
-
-    println!("{}", "=".repeat(107));
-    println!("| {:50} | {:50} |", "Flags", "Description");
-    println!("{}", "-".repeat(107));
-
-    for (flag, desc) in svpi::HELP_FLAGS {
-        println!("| {:50} | {:50} |", flag, desc);
-        println!("{}", "-".repeat(107));
-    }
-}
-
 #[tokio::main]
 async fn main() {
-    match args::get_command() {
-        Some(cmd) => match cmd.as_str() {
-            "init" | "i" => {
-                svpi::device::init_device();
-            }
-            "check" => {
-                svpi::device::check_device();
-            }
-            "format" | "f" => {
-                svpi::device::format_device();
-            }
-            "optimize" | "o" => {
-                svpi::device::optimize_device();
-            }
-            "export" | "e" => {
-                svpi::device::export_data();
-            }
-            "import" | "m" => {
-                svpi::device::import_data();
-            }
-            "dump" | "d" => {
-                svpi::device::save_dump();
-            }
-            "load" | "ld" => {
-                svpi::device::load_dump();
-            }
+    let mode_hint = std::env::args()
+        .skip(1)
+        .find_map(|arg| arg.strip_prefix("--mode=").map(|v| v.to_string()))
+        .unwrap_or_default();
+    let prefer_json_errors = mode_hint.trim().eq_ignore_ascii_case("json");
 
-            "set-master-password" | "set-master" => {
-                svpi::password::set_master_password();
+    let cli = match crate::cli::CliArgs::try_parse() {
+        Ok(v) => v,
+        Err(err) => {
+            match err.kind() {
+                ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
+                    print!("{err}");
+                    std::process::exit(err.exit_code());
+                }
+                _ => {}
             }
-            "reset-master-password" | "reset-master" => {
-                svpi::password::reset_master_password();
+            if prefer_json_errors {
+                let resp = SvpiResponse::invalid_argument(None, "args", err.to_string());
+                resp.print_json();
+            } else {
+                eprintln!("{err}");
             }
-            "check-master-password" | "check-master" => {
-                svpi::password::check_master_password();
-            }
-            "add-encryption-key" | "add-key" => {
-                svpi::password::add_encryption_key();
-            }
-            "link-key" | "link" => {
-                svpi::password::link_key();
-            }
-            "sync-keys" | "sync" => {
-                svpi::password::sync_keys();
-            }
+            std::process::exit(2);
+        }
+    };
 
-            "list" | "l" => {
-                svpi::data::get_data_list();
+    match cli.mode {
+        Mode::Cli | Mode::Json => std::process::exit(svpi::cli_mode::run_with_cli(&cli)),
+        Mode::Server => {
+            if cli.command.is_some() {
+                eprintln!("invalid_argument: subcommand is not supported in --mode=server");
+                std::process::exit(2);
             }
-            "set" | "s" => {
-                svpi::data::save_data();
+            api::server::api_server(cli.interface_type(), cli.auto_exit)
+                .launch()
+                .await
+                .expect("Failed to start API server!");
+        }
+        Mode::Chrome => {
+            if cli.command.is_some() {
+                eprintln!("invalid_argument: subcommand is not supported in --mode=chrome");
+                std::process::exit(2);
             }
-            "get" | "g" => {
-                svpi::data::get_data();
-            }
-            "remove" | "r" => {
-                svpi::data::remove_data();
-            }
-            "rename" | "rn" => {
-                svpi::data::rename_data();
-            }
-            "change-data-type" | "cdt" => {
-                svpi::data::change_data_type();
-            }
-            "change-password" | "cp" => {
-                svpi::data::change_password();
-            }
-
-            "version" | "v" => {
-                print_info();
-            }
-            "help" | "h" => {
-                print_help();
-            }
-            "api-server" => {
-                // api::server::api_server()
-                //     .launch()
-                //     .await
-                //     .expect("Failed to start API server!");
-            }
-            "api-chrome" => {
-                // api::chrome::run_chrome_app().expect("Failed to launch Chrome app!");
-            }
-            _ => {
-                println!("Invalid command!");
-                println!("Run `svpi help` to see the list of available commands.");
-            }
-        },
-        None => {
-            print_help();
+            api::chrome::run_chrome_app(cli.interface_type())
+                .expect("Failed to run Chrome native app!");
         }
     }
 }
