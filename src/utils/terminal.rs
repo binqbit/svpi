@@ -17,18 +17,28 @@ pub fn confirm(msg: &str) -> bool {
 pub fn get_password(title: Option<&str>) -> Option<String> {
     let title = title.unwrap_or("password");
 
+    print!("Enter {title}: ");
+    std::io::stdout().flush().unwrap();
+
+    let password = read_password()
+        .expect("Failed to read password")
+        .trim()
+        .to_string();
+
+    if password.is_empty() {
+        None
+    } else {
+        Some(password)
+    }
+}
+
+pub fn get_password_confirmed(title: Option<&str>) -> Option<String> {
+    let title = title.unwrap_or("password");
+
     loop {
-        print!("Enter {title}: ");
-        std::io::stdout().flush().unwrap();
-
-        let password = read_password()
-            .expect("Failed to read password")
-            .trim()
-            .to_string();
-
-        if password.is_empty() {
+        let Some(password) = get_password(Some(title)) else {
             return None;
-        }
+        };
 
         print!("Confirm {title}: ");
         std::io::stdout().flush().unwrap();
@@ -38,14 +48,11 @@ pub fn get_password(title: Option<&str>) -> Option<String> {
             .trim()
             .to_string();
 
-        if !confirm_password.is_empty() {
-            if password != confirm_password {
-                println!("Passwords do not match!");
-                println!("Please try again.");
-                continue;
-            }
+        if confirm_password.is_empty() || password == confirm_password {
+            return Some(password);
         }
 
-        return Some(password);
+        println!("Passwords do not match!");
+        println!("Please try again.");
     }
 }
