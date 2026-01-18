@@ -1,135 +1,126 @@
 # API Documentation: Server and Chrome App
 
-This document describes the API for both the server and the Chrome application. The goal is to integrate descriptions and highlight similarities in their requests and responses.
+SVPI exposes a small JSON API over two transports:
 
-## Server and Chrome App API
+- **Server API (HTTP)**: `svpi --mode=server` (Rocket on `0.0.0.0:3333`)
+- **Chrome Native Messaging**: `svpi --mode=chrome` (stdin/stdout length-prefixed messages)
 
-### 1. Device Status
+Both transports share the same response envelope.
 
-#### Command
+## Response Envelope
 
-- **Server API**: `GET /status`
-- **Chrome App API**: `get_status()`
+All responses are `SvpiResponse` with `schema: "svpi.response.v1"`.
 
-#### Request
-
-- **Server API**:
-
-```http
-GET /status HTTP/1.1
-Host: localhost:3333
-```
-
-- **Chrome App API**:
+### Success
 
 ```json
 {
-  "status": {}
-}
-```
-
-#### Response
-
-- Items:
-  - `status`: can be one of the following values:
-    - `ok`
-    - `device_not_found`
-    - `device_error`
-  - `version`: Architecture version of the device
-
-#### Description
-
-Fetches the status of the device, returning the status and version. The status can be `ok`, `device_not_found`, or `device_error`.
-
-### 2. Retrieve Segments List
-
-#### Command
-
-- **Server API**: `GET /list`
-- **Chrome App API**: `get_list()`
-
-#### Request
-
-- **Server API**:
-
-```http
-GET /list HTTP/1.1
-Host: localhost:3333
-```
-
-- **Chrome App API**:
-
-```json
-{
-  "list": {}
-}
-```
-
-#### Response
-
-- Items:
-  - `status`: can be one of the following values:
-    - `ok`
-    - `device_not_found`
-    - `device_error`
-  - `segments`: a collection of segment items, each containing:
-    - `name`: The name of the segment
-    - `data_type`: can be one of the following values:
-      - `plain`
-      - `encrypted`
-    - `size`: The size of the segment
-
-#### Description
-
-Retrieves a list of segments from the device, including their names, data types (`plain` or `encrypted`), and sizes. The status indicates the success or failure of the request.
-
-### 3. Fetch Segment Data
-
-#### Command
-
-- **Server API**: `GET /get?name={name}&password={password}&use_root_password={useRootPassword}`
-- **Chrome App API**: `get_data(name, password, useRootPassword)`
-
-#### Request
-
-- **Server API**:
-
-```http
-GET /get?name={name}&password={password}&use_root_password={useRootPassword} HTTP/1.1
-Host: localhost:3333
-```
-
-- **Chrome App API**:
-
-```json
-{
-  "get_data": {
-    "name": "name",
-    "password": "password",
-    "useRootPassword": true
+  "schema": "svpi.response.v1",
+  "ok": true,
+  "command": "api.status",
+  "result": {},
+  "meta": {
+    "app_version": "5.0.0",
+    "architecture_version": 7
   }
 }
 ```
 
-#### Response
+### Error
 
-- Items:
-  - `status`: can be one of the following values:
-    - `ok`
-    - `device_not_found`
-    - `device_error`
-    - `password_error`
-    - `error_decode_password`
-    - `password_not_provided`
-    - `data_not_found`
-    - `error_read_data`
-  - `name`: The name of the retrieved segment
-  - `data`: The decrypted data
+```json
+{
+  "schema": "svpi.response.v1",
+  "ok": false,
+  "command": "api.get",
+  "error": {
+    "code": "password_required",
+    "message": "Password required for decryption",
+    "details": { "name": "my-secret" }
+  },
+  "meta": {
+    "app_version": "5.0.0",
+    "architecture_version": 7
+  }
+}
+```
 
-#### Description
+## 1. Device Status
 
-Fetches decrypted data for the specified segment. The response includes the status of the request and the decrypted data if successful. Possible status values indicate different types of errors or success.
+### Command
 
-## Conclusion
+- **Server API**: `GET /status`
+- **Chrome App API**:
 
-Both systems use similar request and response structures, differing mainly in the method of request dispatch: HTTP requests for server interaction and `chrome.runtime.sendNativeMessage` for Chrome app communication.
+```json
+{ "status": {} }
+```
+
+### Success Result (`result`)
+
+- `status`: `"ok"`
+- `architecture_version`: device architecture version (`u32`)
+
+### Error Codes
+
+- `device_not_found`
+- `device_not_initialized`
+- `architecture_mismatch`
+- `device_error`
+
+## 2. Retrieve Segments List
+
+### Command
+
+- **Server API**: `GET /list`
+- **Chrome App API**:
+
+```json
+{ "list": {} }
+```
+
+### Success Result (`result`)
+
+- `segments`: array of items
+  - `name`: segment name
+  - `data_type`: `"plain" | "hex" | "base58" | "base64" | "binary"`
+  - `encrypted`: `true | false`
+  - `size`: bytes
+  - `fingerprint`: segment fingerprint (hex)
+  - `password_fingerprint`: password fingerprint (hex) or `null`
+
+### Error Codes
+
+- `device_not_found`
+- `device_not_initialized`
+- `architecture_mismatch`
+- `device_error`
+
+## 3. Fetch Segment Data
+
+### Command
+
+- **Server API**: `GET /get?name={name}&password={password}`
+- **Chrome App API**:
+
+```json
+{ "get_data": { "name": "name", "password": "password" } }
+```
+
+### Success Result (`result`)
+
+- `name`: segment name
+- `data`: decoded data (string)
+- `data_type`: `"plain" | "hex" | "base58" | "base64" | "binary"`
+- `encrypted`: `true | false`
+
+### Error Codes
+
+- `device_not_found`
+- `device_not_initialized`
+- `architecture_mismatch`
+- `device_error`
+- `data_not_found`
+- `password_required`
+- `password_error`
+- `forbidden` (encryption key segments are not readable via API)
