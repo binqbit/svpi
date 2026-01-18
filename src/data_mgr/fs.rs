@@ -27,7 +27,7 @@ impl FileSystemDataManager {
 
 impl FileSystemDataManager {
     pub fn init_memory(&mut self, size: usize) -> Result<(), DeviceError> {
-        let mut file = self.file.lock().expect("Failed to lock file");
+        let file = self.file.lock().expect("Failed to lock file");
         file.set_len(size as u64)
             .map_err(|_| DeviceError::InitMemoryError)?;
         Ok(())

@@ -43,6 +43,10 @@ impl Default for Metadata {
 }
 
 impl SegmentManager {
+    pub fn read_architecture_version(&mut self) -> Result<u32, DeviceError> {
+        self.data_mgr.read_value::<u32>(self.version_address())
+    }
+
     pub fn init_metadata(&mut self) -> Result<(), DeviceError> {
         self.data_mgr
             .init_memory(self.metadata.memory_size as usize)?;
@@ -161,7 +165,7 @@ impl SegmentManager {
     }
 
     pub fn check_architecture_version(&mut self) -> Result<bool, DeviceError> {
-        let version = self.data_mgr.read_value::<u32>(self.version_address())?;
+        let version = self.read_architecture_version()?;
         Ok(version == ARCHITECTURE_VERSION)
     }
 

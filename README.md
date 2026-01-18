@@ -56,11 +56,15 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi help / h`: Print this help message. Displays a list of available commands and their descriptions.
 
-- `svpi api-server`: Start the API server. Allows developers to integrate SVPI into their software.
+- `svpi --mode=server`: Start the API server. Allows developers to integrate SVPI into their software.
 
-- `svpi api-chrome`: Start the Chrome app. Allows users to interact with the device through a Chrome extension.
+- `svpi --mode=chrome`: Start the Chrome app. Allows users to interact with the device through a Chrome extension.
 
 ## Flags
+
+- `svpi --mode=<cli|json|server|chrome>`: Select application mode (default: `cli`).
+
+- `svpi <command> --confirm`: Confirm destructive actions (required in `--mode=json`).
 
 - `svpi get --clipboard / -c`: Copy data to clipboard. Automatically copies retrieved data to the system clipboard.
 
@@ -70,7 +74,7 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi change-password <name> --old-password=<old_password> --new-password=<new_password>`: Provide old and new passwords via command line. Allows changing passwords without interactive prompts.
 
-- `svpi api-server --auto-exit / -ae`: Automatically exit the API server after device disconnection. Ensures the server closes when the device is no longer available.
+- `svpi --mode=server --auto-exit`: Automatically exit the API server after device disconnection. Ensures the server closes when the device is no longer available.
 
 - `svpi <command> --file=<file_name>`: Open a file password storage. Allows working with file-based password storage instead of device storage.
 

@@ -1,9 +1,8 @@
 use serialport_srwp::SerialPortDataManager;
 use thiserror::Error;
 
-use crate::{
-    data_mgr::{fs::FileSystemDataManager, memory::MemoryDataManager, serial_port::SerialPortExt},
-    utils::args,
+use crate::data_mgr::{
+    fs::FileSystemDataManager, memory::MemoryDataManager, serial_port::SerialPortExt,
 };
 
 mod fs;
@@ -52,12 +51,6 @@ impl DataInterfaceType {
                 Ok(DataManager::Memory(MemoryDataManager::new(data.clone())))
             }
         }
-    }
-
-    pub fn from_args_or_default() -> Self {
-        args::get_param_by_flag("--file")
-            .map(DataInterfaceType::FileSystem)
-            .unwrap_or_default()
     }
 }
 

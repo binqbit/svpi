@@ -51,11 +51,6 @@ impl PasswordManager {
         SegmentManager::try_load(device_type).map(Self)
     }
 
-    pub fn load_from_args_or_default() -> Result<Self, DataManagerError> {
-        let interface_type = DataInterfaceType::from_args_or_default();
-        Self::try_load(interface_type)
-    }
-
     pub fn get_data_manager(&mut self) -> &mut SegmentManager {
         &mut self.0
     }

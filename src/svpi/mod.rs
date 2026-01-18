@@ -1,6 +1,4 @@
-pub mod data;
-pub mod device;
-pub mod password;
+pub mod cli_mode;
 
 pub const HELP_COMMANDS: &[(&str, &str)] = &[
     (
@@ -53,11 +51,19 @@ pub const HELP_COMMANDS: &[(&str, &str)] = &[
     ("svpi change-password / cp <name>", "Change data password"),
     ("svpi version / v", "Print the version of the application"),
     ("svpi help / h", "Print this help message"),
-    ("svpi api-server", "Start the API server"),
-    ("svpi api-chrome", "Start the Chrome app"),
+    ("svpi --mode=server", "Start the API server"),
+    ("svpi --mode=chrome", "Start the Chrome app"),
 ];
 
 pub const HELP_FLAGS: &[(&str, &str)] = &[
+    (
+        "svpi --mode=<cli|json|server|chrome>",
+        "Select application mode (default: cli)",
+    ),
+    (
+        "svpi <command> --confirm",
+        "Confirm destructive actions (required in --mode=json)",
+    ),
     ("svpi get --clipboard / -c", "Copy data to clipboard"),
     (
         "svpi get <name> --password=<password>",
@@ -72,7 +78,19 @@ pub const HELP_FLAGS: &[(&str, &str)] = &[
         "Provide old and new passwords via command line",
     ),
     (
-        "svpi api-server --auto-exit / -ae",
+        "svpi set-master --master-password=<password>",
+        "Provide master password (required in --mode=json)",
+    ),
+    (
+        "svpi add-key <name> --master-password=<p> --key-password=<p>",
+        "Provide master/key passwords (required in --mode=json)",
+    ),
+    (
+        "svpi change-password <name> --remove-encryption",
+        "Remove encryption (decrypt entry)",
+    ),
+    (
+        "svpi --mode=server --auto-exit",
         "Automatically exit the API server after device disconnection",
     ),
     (
