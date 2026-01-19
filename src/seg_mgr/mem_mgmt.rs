@@ -66,13 +66,13 @@ impl SegmentManager {
 mod tests {
     use crate::{
         data_mgr::DataInterfaceType,
-        seg_mgr::{DataType, SegmentManager},
+        seg_mgr::{DataType, EncryptionLevel, SegmentManager},
     };
 
     fn setup_mgr() -> SegmentManager {
         let mut mgr =
             SegmentManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
-        mgr.init_device(256).expect("device");
+        mgr.init_device(256, EncryptionLevel::Low).expect("device");
         mgr
     }
 

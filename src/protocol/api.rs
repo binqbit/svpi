@@ -192,7 +192,7 @@ mod tests {
             PasswordManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init mgr");
         pass_mgr
             .get_data_manager()
-            .init_device(1024)
+            .init_device(1024, EncryptionLevel::Low)
             .expect("init device");
 
         // Plain value

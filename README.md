@@ -14,7 +14,7 @@ To build the SVPI project, execute the provided build scripts for your operating
 
 SVPI supports a number of commands that help users interact with the Blaustahl Storage Device:
 
-- `svpi init / i <memory_size>`: Initialize the device for the desired architecture. This command prepares the device for operation by creating the necessary data architecture.
+- `svpi init / i <memory_size> [low|medium|strong]`: Initialize the device for the desired architecture. This command prepares the device for operation by creating the necessary data architecture.
 
 - `svpi check / c`: Check the status of the device. Useful for verifying the device's connection and current state.
 
@@ -50,7 +50,7 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 
 - `svpi change-data-type / cdt <name> <new_data_type>`: Change data type. Allows the user to modify the data type of existing entries.
 
-- `svpi change-password / cp <name>`: Change data password. Allows the user to update the password for specific data entries.
+- `svpi change-password / cp <name>`: Change data password. To remove encryption, omit the new password.
 
 - `svpi version / v`: Print the version of the application. Useful for checking the software version and ensuring it is up to date.
 
@@ -73,6 +73,8 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 - `svpi set <name> <value> --password=<password>`: Provide password via command line. Allows specifying the password directly when setting data.
 
 - `svpi change-password <name> --old-password=<old_password> --new-password=<new_password>`: Provide old and new passwords via command line. Allows changing passwords without interactive prompts.
+
+- `svpi change-password <name> --old-password=<old_password>`: Remove encryption (provide only `--old-password`). Decrypts an entry and saves it unencrypted.
 
 - `svpi --mode=server --auto-exit`: Automatically exit the API server after device disconnection. Ensures the server closes when the device is no longer available.
 
@@ -135,6 +137,7 @@ SVPI uses a carefully designed segment architecture for managing and storing dat
    - `"\0<METADATA>\0"`: Marker for the start of metadata segment initialization.
    - `<version> (4 bytes)`: Four bytes allocated to store the architecture version.
    - `<memory size> (4 bytes)`: Four bytes allocated to store the size of the device's entire memory.
+   - `<dump protection> (1 byte)`: Global dump protection level (multiplier: low=1, medium=2, strong=4).
    - `<master password hash> (32 bytes)`: A 32-byte hash of the master password for data encryption.
    - `"\0</METADATA>\0"`: Marker for the end of metadata segment initialization.
 

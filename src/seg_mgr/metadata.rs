@@ -6,7 +6,7 @@ use crate::{
     seg_mgr::{DataError, DataInfo, SegmentError, METADATA_SIZE},
 };
 
-use super::{Segment, SegmentManager, ARCHITECTURE_VERSION};
+use super::{EncryptionLevel, Segment, SegmentManager, ARCHITECTURE_VERSION};
 
 pub const START_INIT_DATA: &[u8] = b"\0<METADATA>\0";
 pub const END_INIT_DATA: &[u8] = b"\0</METADATA>\0";
@@ -16,6 +16,7 @@ pub const MASTER_PASSWORD_HASH_SIZE: usize = 32;
 pub struct Metadata {
     pub version: u32,
     pub memory_size: u32,
+    pub dump_protection: EncryptionLevel,
     pub master_password_hash: [u8; MASTER_PASSWORD_HASH_SIZE],
 }
 
@@ -37,6 +38,7 @@ impl Default for Metadata {
         Self {
             version: ARCHITECTURE_VERSION,
             memory_size: 0,
+            dump_protection: EncryptionLevel::Medium,
             master_password_hash: [0; MASTER_PASSWORD_HASH_SIZE],
         }
     }

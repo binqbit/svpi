@@ -6,7 +6,7 @@ use crate::{
 
 impl PasswordManager {
     pub fn set_master_password(&mut self, password: &str) -> Result<(), PasswordManagerError> {
-        let hash = get_master_password_check(password.as_bytes());
+        let hash = get_master_password_check(password.as_bytes(), self.0.metadata.dump_protection);
         self.0
             .set_master_password_hash(hash)
             .map_err(PasswordManagerError::SetMasterPassword)
@@ -25,7 +25,7 @@ impl PasswordManager {
     }
 
     pub fn check_master_password(&self, password: &str) -> bool {
-        let hash = get_master_password_check(password.as_bytes());
+        let hash = get_master_password_check(password.as_bytes(), self.0.metadata.dump_protection);
         self.0.check_master_password_hash(hash)
     }
 
@@ -36,13 +36,14 @@ impl PasswordManager {
         password: &str,
         level: EncryptionLevel,
     ) -> Result<bool, PasswordManagerError> {
-        let mut encryption_key = EncryptionKey::new(master_password, name, level);
+        let dump_protection = self.0.metadata.dump_protection;
+        let mut encryption_key = EncryptionKey::new(master_password, name, level, dump_protection);
         encryption_key
-            .encrypt(password)
+            .encrypt(password, dump_protection)
             .map_err(PasswordManagerError::EncryptionError)?;
         let data = encryption_key.pack();
 
-        let password_hash = encryption_key.get_password_fingerprint(password);
+        let password_hash = encryption_key.get_password_fingerprint(password, dump_protection);
 
         self.0
             .set_segment(name, &data, DataType::EncryptionKey, Some(password_hash))
@@ -51,6 +52,7 @@ impl PasswordManager {
     }
 
     pub fn link_key(&mut self, name: &str, password: &str) -> Result<(), PasswordManagerError> {
+        let dump_protection = self.0.metadata.dump_protection;
         let (fingerprint, key) = self.get_encryption_key(password, None)?;
 
         let segment = if let Some(segment) = self.0.find_segment_by_name(name) {
@@ -68,7 +70,7 @@ impl PasswordManager {
             .to_bytes()
             .map_err(|err| PasswordManagerError::ReadPasswordError(SegmentError::DataError(err)))?;
         let _ = data_type
-            .decrypt(&data, &key)
+            .decrypt(&data, &key, dump_protection)
             .map_err(PasswordManagerError::InvalidEncryptionKey)?;
 
         segment.info.password_fingerprint = Some(fingerprint);
@@ -83,6 +85,7 @@ impl PasswordManager {
         &mut self,
         master_password: &str,
     ) -> Result<(), PasswordManagerError> {
+        let dump_protection = self.0.metadata.dump_protection;
         let mut encryption_keys = vec![];
         for key in self.get_encryption_keys() {
             let encryption_key = EncryptionKey::unpack(
@@ -99,6 +102,7 @@ impl PasswordManager {
                 master_password,
                 key.get_name().as_str(),
                 encryption_key.level,
+                dump_protection,
             );
 
             encryption_keys.push((encryption_key, key.info.fingerprint.fingerprint));
@@ -122,7 +126,10 @@ impl PasswordManager {
                 })?;
 
             for (encryption_key, fingerprint) in &encryption_keys {
-                if data_type.decrypt(&data, &encryption_key.key).is_ok() {
+                if data_type
+                    .decrypt(&data, &encryption_key.key, dump_protection)
+                    .is_ok()
+                {
                     segment.info.password_fingerprint = Some(*fingerprint);
                     segment
                         .update_meta()
@@ -144,7 +151,7 @@ mod tests {
         let mut mgr =
             PasswordManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
         mgr.get_data_manager()
-            .init_device(1024)
+            .init_device(1024, EncryptionLevel::Low)
             .expect("init device");
         mgr
     }

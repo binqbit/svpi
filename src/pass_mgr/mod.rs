@@ -58,7 +58,7 @@ impl PasswordManager {
 
 #[cfg(test)]
 mod tests {
-    use crate::{data_mgr::DataInterfaceType, pass_mgr::PasswordManager};
+    use crate::{data_mgr::DataInterfaceType, pass_mgr::PasswordManager, seg_mgr::EncryptionLevel};
 
     #[test]
     fn test_init() {
@@ -67,7 +67,7 @@ mod tests {
 
         pass_mgr
             .get_data_manager()
-            .init_device(1024)
+            .init_device(1024, EncryptionLevel::Low)
             .expect("Init device");
 
         assert_eq!(pass_mgr.0.metadata.memory_size, 1024);
@@ -80,7 +80,7 @@ mod tests {
 
         pass_mgr
             .get_data_manager()
-            .init_device(1024)
+            .init_device(1024, EncryptionLevel::Low)
             .expect("Init device");
 
         let dump = pass_mgr.get_data_manager().get_dump().expect("Dump data");

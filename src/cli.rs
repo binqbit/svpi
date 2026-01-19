@@ -93,6 +93,14 @@ pub enum Command {
     Init {
         #[arg(value_name = "MEMORY_SIZE", help = "Device memory size in bytes")]
         memory_size: u32,
+
+        #[arg(
+            value_enum,
+            default_value_t = EncryptionLevelArg::Medium,
+            value_name = "PROTECTION",
+            help = "Dump protection level: low=1, medium=2, strong=4"
+        )]
+        protection: EncryptionLevelArg,
     },
 
     #[command(name = "check", alias = "c", about = "Check device status")]
@@ -219,6 +227,24 @@ pub enum EncryptionLevelArg {
     Medium,
     /// Slower, stronger
     Strong,
+}
+
+impl EncryptionLevelArg {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            EncryptionLevelArg::Low => "low",
+            EncryptionLevelArg::Medium => "medium",
+            EncryptionLevelArg::Strong => "strong",
+        }
+    }
+
+    pub const fn multiplier(self) -> u32 {
+        match self {
+            EncryptionLevelArg::Low => 1,
+            EncryptionLevelArg::Medium => 2,
+            EncryptionLevelArg::Strong => 4,
+        }
+    }
 }
 
 impl From<EncryptionLevelArg> for EncryptionLevel {

@@ -139,7 +139,10 @@ fn execute_with_output(
             0,
         ),
 
-        cli::Command::Init { memory_size } => {
+        cli::Command::Init {
+            memory_size,
+            protection,
+        } => {
             let mut pass_mgr = match open_mgr_for_uninitialized(interface_type, cmd_out.clone()) {
                 Ok(mgr) => mgr,
                 Err(err) => return err,
@@ -164,12 +167,20 @@ fn execute_with_output(
                 cmd_out.clone(),
                 prompt,
                 "init",
-                json!({ "memory_size": memory_size, "already_initialized": already_initialized }),
+                json!({
+                    "memory_size": memory_size,
+                    "dump_protection": protection.as_str(),
+                    "dump_protection_multiplier": protection.multiplier(),
+                    "already_initialized": already_initialized
+                }),
             ) {
                 return err;
             }
 
-            if let Err(err) = pass_mgr.get_data_manager().init_device(memory_size) {
+            if let Err(err) = pass_mgr
+                .get_data_manager()
+                .init_device(memory_size, protection.into())
+            {
                 return SvpiResponse::data_manager_error_verbose(cmd_out, err).with_exit_code();
             }
 
@@ -179,6 +190,8 @@ fn execute_with_output(
                     json!({
                         "initialized": true,
                         "memory_size": memory_size,
+                        "dump_protection": protection.as_str(),
+                        "dump_protection_multiplier": protection.multiplier(),
                         "already_initialized": already_initialized,
                     }),
                 ),

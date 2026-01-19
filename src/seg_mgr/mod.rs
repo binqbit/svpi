@@ -16,7 +16,7 @@ pub use encryption::*;
 pub use metadata::*;
 pub use segment::*;
 
-pub const ARCHITECTURE_VERSION: u32 = 7;
+pub const ARCHITECTURE_VERSION: u32 = 8;
 pub const METADATA_SIZE: usize = std::mem::size_of::<Metadata>();
 pub const SEGMENT_INFO_SIZE: usize = std::mem::size_of::<DataInfo>();
 
@@ -54,8 +54,13 @@ impl SegmentManager {
         Ok(Self::from_data_manager(data_mgr))
     }
 
-    pub fn init_device(&mut self, memory_size: u32) -> Result<(), DataManagerError> {
+    pub fn init_device(
+        &mut self,
+        memory_size: u32,
+        dump_protection: EncryptionLevel,
+    ) -> Result<(), DataManagerError> {
         self.metadata.memory_size = memory_size;
+        self.metadata.dump_protection = dump_protection;
         self.init_metadata()
             .map_err(|_| DataManagerError::DeviceNotInitialized)?;
         Ok(())

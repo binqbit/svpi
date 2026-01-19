@@ -2,7 +2,7 @@ pub mod cli_mode;
 
 pub const HELP_COMMANDS: &[(&str, &str)] = &[
     (
-        "svpi init / i <memory_size>",
+        "svpi init / i <memory_size> [low|medium|strong]",
         "Initialize the device for the desired architecture",
     ),
     ("svpi check / c", "Check the status of the device"),

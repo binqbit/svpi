@@ -17,6 +17,7 @@ impl PasswordManager {
         password: &str,
         fingerprint: Option<[u8; DATA_FINGERPRINT_SIZE]>,
     ) -> Result<([u8; DATA_FINGERPRINT_SIZE], Vec<u8>), PasswordManagerError> {
+        let dump_protection = self.0.metadata.dump_protection;
         if let Some(fp) = fingerprint {
             let encryption_key_segment = self
                 .get_encryption_keys()
@@ -31,7 +32,7 @@ impl PasswordManager {
                     .map_err(PasswordManagerError::InvalidEncryptionKey)?;
                 let mut key = EncryptionKey::unpack(&data)
                     .map_err(PasswordManagerError::InvalidEncryptionKey)?;
-                key.decrypt(password)
+                key.decrypt(password, dump_protection)
                     .map_err(PasswordManagerError::InvalidEncryptionKey)?;
                 return Ok((encryption_key_segment.info.fingerprint.fingerprint, key.key));
             }
@@ -45,13 +46,16 @@ impl PasswordManager {
                 .map_err(PasswordManagerError::InvalidEncryptionKey)?;
             let mut key =
                 EncryptionKey::unpack(&data).map_err(PasswordManagerError::InvalidEncryptionKey)?;
-            if key.decrypt(password).is_ok() {
+            if key.decrypt(password, dump_protection).is_ok() {
                 return Ok((seg.info.fingerprint.fingerprint, key.key));
             }
         }
 
         let key = EncryptionKey::from(password);
-        Ok((key.get_password_fingerprint(password), key.key))
+        Ok((
+            key.get_password_fingerprint(password, dump_protection),
+            key.key,
+        ))
     }
 }
 
@@ -67,7 +71,7 @@ mod tests {
         let mut mgr =
             PasswordManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
         mgr.get_data_manager()
-            .init_device(1024)
+            .init_device(1024, EncryptionLevel::Low)
             .expect("init device");
         mgr
     }
@@ -79,7 +83,7 @@ mod tests {
         assert_eq!(key, b"pwd");
         assert_eq!(
             fp,
-            EncryptionKey::from("pwd").get_password_fingerprint("pwd")
+            EncryptionKey::from("pwd").get_password_fingerprint("pwd", EncryptionLevel::Low)
         );
     }
 
@@ -88,9 +92,15 @@ mod tests {
         let mut mgr = setup_mgr();
         let password = "pwd";
 
-        let mut key = EncryptionKey::new("secretkey", "test", EncryptionLevel::default());
+        let dump_protection = EncryptionLevel::Low;
+        let mut key = EncryptionKey::new(
+            "secretkey",
+            "test",
+            EncryptionLevel::default(),
+            dump_protection,
+        );
         let expected_plain_key = key.key.clone();
-        key.encrypt(password).expect("encrypt");
+        key.encrypt(password, dump_protection).expect("encrypt");
         let data = key.pack();
 
         mgr.0
@@ -98,7 +108,7 @@ mod tests {
                 "enc",
                 &data,
                 DataType::EncryptionKey,
-                Some(key.get_password_fingerprint("pwd")),
+                Some(key.get_password_fingerprint("pwd", dump_protection)),
             )
             .expect("set segment");
 

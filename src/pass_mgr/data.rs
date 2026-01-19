@@ -10,13 +10,14 @@ impl PasswordManager {
         password: &str,
         encryption_key: Option<String>,
     ) -> Result<bool, PasswordManagerError> {
+        let dump_protection = self.0.metadata.dump_protection;
         let data = Data::from_str_infer(password);
         let data_type = data.get_type();
 
         let (data, password_fingerprint) = if let Some(encryption_key) = encryption_key {
             let (fingerprint, encryption_key) = self.get_encryption_key(&encryption_key, None)?;
             let data = data
-                .encrypt(&encryption_key)
+                .encrypt(&encryption_key, dump_protection)
                 .map_err(PasswordManagerError::EncryptionError)?;
             (data, Some(fingerprint))
         } else {
@@ -40,6 +41,7 @@ impl PasswordManager {
     where
         F: FnOnce() -> String,
     {
+        let dump_protection = self.0.metadata.dump_protection;
         let segment = if let Some(segment) = self.0.find_segment_by_name(name) {
             segment
         } else {
@@ -62,9 +64,11 @@ impl PasswordManager {
             let encryption_key = get_encryption_key();
             let (_, encryption_key) =
                 self.get_encryption_key(&encryption_key, password_fingerprint)?;
-            let data = data_type.decrypt(&data, &encryption_key).map_err(|err| {
-                PasswordManagerError::ReadPasswordError(SegmentError::DataError(err))
-            })?;
+            let data = data_type
+                .decrypt(&data, &encryption_key, dump_protection)
+                .map_err(|err| {
+                    PasswordManagerError::ReadPasswordError(SegmentError::DataError(err))
+                })?;
             Ok(data.to_string().map_err(|err| {
                 PasswordManagerError::ReadPasswordError(SegmentError::DataError(err))
             })?)
@@ -114,13 +118,16 @@ impl PasswordManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{data_mgr::DataInterfaceType, seg_mgr::DataType};
+    use crate::{
+        data_mgr::DataInterfaceType,
+        seg_mgr::{DataType, EncryptionLevel},
+    };
 
     fn setup_mgr() -> PasswordManager {
         let mut mgr =
             PasswordManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
         mgr.get_data_manager()
-            .init_device(1024)
+            .init_device(1024, EncryptionLevel::Low)
             .expect("init device");
         mgr
     }
