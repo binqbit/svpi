@@ -48,7 +48,10 @@ pub const HELP_COMMANDS: &[(&str, &str)] = &[
         "svpi change-data-type / cdt <name> <new_data_type>",
         "Change data type",
     ),
-    ("svpi change-password / cp <name>", "Change data password"),
+    (
+        "svpi change-password / cp <name>",
+        "Change data password (omit new password to remove encryption)",
+    ),
     ("svpi version / v", "Print the version of the application"),
     ("svpi help / h", "Print this help message"),
     ("svpi --mode=server", "Start the API server"),
@@ -86,8 +89,8 @@ pub const HELP_FLAGS: &[(&str, &str)] = &[
         "Provide master/key passwords (required in --mode=json)",
     ),
     (
-        "svpi change-password <name> --remove-encryption",
-        "Remove encryption (decrypt entry)",
+        "svpi change-password <name> --old-password=<old_password>",
+        "Remove encryption (provide only --old-password)",
     ),
     (
         "svpi --mode=server --auto-exit",

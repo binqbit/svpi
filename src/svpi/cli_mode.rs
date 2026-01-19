@@ -1089,7 +1089,6 @@ fn execute_with_output(
 
             let mut old_password = args.old_password.filter(|p| !p.is_empty());
             let mut new_password = args.new_password.filter(|p| !p.is_empty());
-            let remove_encryption = args.remove_encryption;
 
             let mut pass_mgr = match load_mgr(interface_type, cmd_out.clone()) {
                 Ok(mgr) => mgr,
@@ -1111,7 +1110,7 @@ fn execute_with_output(
             };
 
             if encrypted && old_password.is_none() && output_mode == OutputFormat::Cli {
-                old_password = terminal::get_password_confirmed(Some("old password"));
+                old_password = terminal::get_password(Some("old password"));
                 if old_password.is_none() {
                     return SvpiResponse::cancelled(
                         cmd_out,
@@ -1131,29 +1130,9 @@ fn execute_with_output(
                 .with_exit_code();
             }
 
-            if !remove_encryption && new_password.is_none() && output_mode == OutputFormat::Cli {
+            if new_password.is_none() && output_mode == OutputFormat::Cli {
                 new_password = terminal::get_password_confirmed(Some("new password"));
-                if new_password.is_none() {
-                    return SvpiResponse::cancelled(
-                        cmd_out,
-                        "change-password",
-                        json!({ "name": name }),
-                    )
-                    .with_exit_code();
-                }
             }
-
-            let new_key = if remove_encryption {
-                None
-            } else if let Some(pw) = new_password {
-                Some(pw)
-            } else {
-                return SvpiResponse::missing_argument(
-                    cmd_out,
-                    "new_password (--new-password=... or --remove-encryption)",
-                )
-                .with_exit_code();
-            };
 
             let data =
                 match pass_mgr.read_password(&name, || old_password.clone().unwrap_or_default()) {
@@ -1163,7 +1142,7 @@ fn execute_with_output(
                     }
                 };
 
-            let saved = match pass_mgr.save_password(&name, &data, new_key.clone()) {
+            let saved = match pass_mgr.save_password(&name, &data, new_password.clone()) {
                 Ok(v) => v,
                 Err(err) => {
                     return SvpiResponse::password_manager_error(cmd_out, err).with_exit_code()
@@ -1177,7 +1156,7 @@ fn execute_with_output(
             (
                 SvpiResponse::ok(
                     cmd_out,
-                    json!({ "changed": true, "name": name, "encrypted": new_key.is_some() }),
+                    json!({ "changed": true, "name": name, "encrypted": new_password.is_some() }),
                 ),
                 0,
             )

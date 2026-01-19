@@ -386,10 +386,7 @@ pub struct ChangePasswordArgs {
         long = "new-password",
         require_equals = true,
         value_name = "PASSWORD",
-        help = "New password"
+        help = "New password (to change; omit to remove encryption)"
     )]
     pub new_password: Option<String>,
-
-    #[arg(long = "remove-encryption", help = "Remove encryption (decrypt entry)")]
-    pub remove_encryption: bool,
 }
