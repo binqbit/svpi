@@ -18,10 +18,10 @@ All responses are `SvpiResponse` with `schema: "svpi.response.v1"`.
   "schema": "svpi.response.v1",
   "ok": true,
   "command": "api.status",
-  "result": {},
+  "result": { "status": "ok", "architecture_version": 8 },
   "meta": {
-    "app_version": "5.0.0",
-    "architecture_version": 7
+    "app_version": "6.0.0",
+    "architecture_version": 8
   }
 }
 ```
@@ -39,11 +39,17 @@ All responses are `SvpiResponse` with `schema: "svpi.response.v1"`.
     "details": { "name": "my-secret" }
   },
   "meta": {
-    "app_version": "5.0.0",
-    "architecture_version": 7
+    "app_version": "6.0.0",
+    "architecture_version": 8
   }
 }
 ```
+
+Notes:
+
+- `meta.app_version` / `meta.architecture_version` are values from the running SVPI binary (expected architecture).
+- `result.architecture_version` (in `/status`) is the architecture version found on the device/storage.
+- `command` uses `api.*` for HTTP and `chrome.*` for Native Messaging.
 
 ## 1. Device Status
 
@@ -86,7 +92,11 @@ All responses are `SvpiResponse` with `schema: "svpi.response.v1"`.
   - `data_type`: `"plain" | "hex" | "base58" | "base64" | "binary"`
   - `size`: bytes
   - `fingerprint`: segment fingerprint (hex)
-  - `password_fingerprint`: password fingerprint (hex) or `null` (when not encrypted)
+  - `password_fingerprint`: encryption key fingerprint (hex) or `null` (when not encrypted)
+
+Notes:
+
+- Encryption key segments are not returned by `/list`.
 
 ### Error Codes
 
@@ -99,7 +109,7 @@ All responses are `SvpiResponse` with `schema: "svpi.response.v1"`.
 
 ### Command
 
-- **Server API**: `GET /get?name={name}&password={password}`
+- **Server API**: `GET /get?name={name}[&password={password}]`
 - **Chrome App API**:
 
 ```json
@@ -112,6 +122,11 @@ All responses are `SvpiResponse` with `schema: "svpi.response.v1"`.
 - `data`: decoded data (string)
 - `data_type`: `"plain" | "hex" | "base58" | "base64" | "binary"`
 - `encrypted`: `true | false`
+
+Notes:
+
+- `password` is optional for unencrypted segments. For encrypted segments it is required.
+- You can detect encryption via `/list`: `password_fingerprint != null`.
 
 ### Error Codes
 

@@ -10,77 +10,71 @@ The primary goal of SVPI is to offer a simple and intuitive interface for workin
 
 To build the SVPI project, execute the provided build scripts for your operating system: [Linux](./build.sh) and [Windows](./build.bat).
 
-## Commands
+## How It Works (Concepts)
 
-SVPI supports a number of commands that help users interact with the Blaustahl Storage Device:
+SVPI is built around a small set of core concepts. The exact list of CLI commands is intentionally not duplicated here — run `svpi --help` (or `svpi help`) to see the current command set.
 
-- `svpi init / i <memory_size> [low|medium|strong]`: Initialize the device for the desired architecture. This command prepares the device for operation by creating the necessary data architecture.
+### Storage Backends
 
-- `svpi check / c`: Check the status of the device. Useful for verifying the device's connection and current state.
+SVPI can use multiple backends:
 
-- `svpi format / f`: Format the data in the device. Allows the user to clear all saved data if needed.
+- **SerialPort**: the Blaustahl device (default backend).
+- **File**: a file-backed storage (useful for testing, CI, or local vault files).
+- **Memory**: in-memory backend (used mainly in tests).
 
-- `svpi optimize / o`: Optimize the memory. Combines free space and removes fragmentation to make more space available for new data.
+### Modes (Execution + Output)
 
-- `svpi export / e <file_name>`: Export data to a file. Allows the user to save data from the device to an external file.
+SVPI has a single execution pipeline, with different modes controlling interaction and output format:
 
-- `svpi import / m <file_name>`: Import data from a file. Allows the user to load data from an external file to the device.
+- **CLI mode** (`--mode=cli`): interactive (can prompt for passwords / confirmations).
+- **JSON mode** (`--mode=json`): machine-friendly JSON responses; no interactive prompts. For destructive actions, `--confirm` is required.
+- **Server mode** (`--mode=server`): HTTP API server.
+- **Chrome mode** (`--mode=chrome`): Chrome Native Messaging transport (stdin/stdout).
 
-- `svpi dump / d <file_name>`: Dump the data from the device to a file. This command allows the user to save all data from the device to an external file for backup or analysis.
+Note: some global flags require `=` (e.g. `--mode=json`, `--file=vault.bin`).
 
-- `svpi load / ld <file_name>`: Load dump data from a file to the device. This command allows the user to restore data from an external file to the device.
+### Data Entries
 
-- `svpi set-master-password / set-master`: Set master password. Allows the user to set a master password for device encryption.
+Data is stored as named **segments**:
 
-- `svpi reset-master-password / reset-master`: Reset master password. Allows the user to reset the master password for device encryption.
+- Each entry has a **name** (up to 32 bytes) and a **data type** (`plain`, `hex`, `base58`, `base64`, `binary`).
+- Each entry may be **unencrypted** (stored as decoded bytes) or **encrypted** (stored as an encrypted blob).
+- Encrypted entries keep `data_type` as the **type of the decrypted data**.
 
-- `svpi check-master-password / check-master`: Check master password. Allows the user to verify the master password.
+Each segment also has small hashes in its metadata:
 
-- `svpi add-encryption-key / add-key <name>`: Add encryption key. Allows the user to add a new encryption key for data protection.
+- `fingerprint`: a short segment fingerprint (hex, 4 bytes).
+- `password_fingerprint` (optional): presence means the segment is encrypted. For normal data entries this field stores the **encryption-key fingerprint** used to decrypt the entry.
 
-- `svpi list / l`: Print all data list. Displays a list of all saved data for quick viewing of available information.
+### Encryption Model
 
-- `svpi set / s <name> <data>`: Set data. This command allows the user to enter new information into the storage.
+SVPI uses a two-layer model: **Master Password → Encryption Keys → Data**.
 
-- `svpi get / g <name>`: Get data. Retrieves data by the specified name for easy access to specific information.
+- **Master password** is the root secret. The device stores only a check-hash of it in metadata (it does not store the password itself).
+- **Encryption keys** are derived from the master password + key name, and then encrypted with a regular **key password**. This makes it possible to recreate keys from the master password (and then re-link encrypted data).
+- **Data encryption** uses XChaCha20-Poly1305 with a key derived via Argon2id. Encrypted blobs are stored as: `salt(16) | nonce(24) | ciphertext`.
 
-- `svpi remove / r <name>`: Remove data. Deletes data by the specified name to free up memory.
+### Dump Protection Level
 
-- `svpi rename / rn <old_name> <new_name>`: Rename data. Allows the user to change the name of existing data.
+When initializing a storage, you choose a dump protection level: `low` (1), `medium` (2), `strong` (4).
 
-- `svpi change-data-type / cdt <name> <new_data_type>`: Change data type. Allows the user to modify the data type of existing entries.
+This level is stored in metadata and influences KDF parameters (Argon2id) used across cryptographic operations.
 
-- `svpi change-password / cp <name>`: Change data password. To remove encryption, omit the new password.
+### Dump / Load
 
-- `svpi version / v`: Print the version of the application. Useful for checking the software version and ensuring it is up to date.
+SVPI supports raw dumps for backups and migrations:
 
-- `svpi help / h`: Print this help message. Displays a list of available commands and their descriptions.
+- **Dump** is a raw byte-for-byte snapshot of the storage memory region.
+- **Load** overwrites the storage with a provided dump (destructive operation).
 
-- `svpi --mode=server`: Start the API server. Allows developers to integrate SVPI into their software.
+### Wiping & Optimization
 
-- `svpi --mode=chrome`: Start the Chrome app. Allows users to interact with the device through a Chrome extension.
+To reduce data remanence:
 
-## Flags
+- Removing an entry overwrites its data and metadata with zeroes.
+- Optimizing compacts segments and overwrites the freed region with zeroes.
 
-- `svpi --mode=<cli|json|server|chrome>`: Select application mode (default: `cli`).
-
-- `svpi <command> --confirm`: Confirm destructive actions (required in `--mode=json`).
-
-- `svpi get --clipboard / -c`: Copy data to clipboard. Automatically copies retrieved data to the system clipboard.
-
-- `svpi get <name> --password=<password>`: Provide password via command line. Allows specifying the password directly in the command.
-
-- `svpi set <name> <value> --password=<password>`: Provide password via command line. Allows specifying the password directly when setting data.
-
-- `svpi change-password <name> --old-password=<old_password> --new-password=<new_password>`: Provide old and new passwords via command line. Allows changing passwords without interactive prompts.
-
-- `svpi change-password <name> --old-password=<old_password>`: Remove encryption (provide only `--old-password`). Decrypts an entry and saves it unencrypted.
-
-- `svpi --mode=server --auto-exit`: Automatically exit the API server after device disconnection. Ensures the server closes when the device is no longer available.
-
-- `svpi <command> --file=<file_name>`: Open a file password storage. Allows working with file-based password storage instead of device storage.
-
-## Export/Import Format
+## Export / Import Format
 
 ### Text file list of data with the following format
 
@@ -93,38 +87,10 @@ SVPI supports a number of commands that help users interact with the Blaustahl S
 - Encrypted data:
 
 ```plaintext
-<name> = data:application/vnd.binqbit.svpi;fp=<password_fingerprint>;<data_type>,<hex_data>
+<name> = data:application/vnd.binqbit.svpi;fp=<key_fingerprint>;<data_type>,<hex_ciphertext>
 ```
 
-### How can this be used?
-
-This can be useful for transferring data between devices, backing up, or securely migrating data between software versions.
-
-## Master Password Encryption
-
-Master Password is the main root password for restoring data. This password generates encryption keys that encode data. These encryption keys are encoded with simple passwords that are entered from the keyboard. But in the case of a loss of passwords, everything can be restored using the Master Password.
-
-### Decrypt All Data And Encrypt With New Password
-
-```shell
-svpi export <file_name>
-svpi import <file_name>
-rm <file_name>
-```
-
-### How it Works?
-
-The master password is used to encrypt data and manage access to the device. Encryption keys can be added for additional layers of security for specific data entries.
-
-### Why This is Needed?
-
-You can use the master password and encryption keys for securing data without worrying about accidentally revealing them. If someone gains access to your encrypted data, they won't be able to decrypt it without the proper passwords and keys.
-
-### Note
-
-- If you suspect that your data has been compromised, change the master password and encryption keys to protect your data.
-- If you forget the master password, you can reset it, but this may result in loss of encrypted data.
-- Since data encryption depends on passwords and keys, losing them may result in permanent data loss.
+`data_type` is the type of the decrypted data; encrypted payload is stored as hex.
 
 ## Data Storage Architecture
 
@@ -135,28 +101,26 @@ SVPI uses a carefully designed segment architecture for managing and storing dat
 1. Metadata Initialization:
 
    - `"\0<METADATA>\0"`: Marker for the start of metadata segment initialization.
-   - `<version> (4 bytes)`: Four bytes allocated to store the architecture version.
-   - `<memory size> (4 bytes)`: Four bytes allocated to store the size of the device's entire memory.
-   - `<dump protection> (1 byte)`: Global dump protection level (multiplier: low=1, medium=2, strong=4).
-   - `<master password hash> (32 bytes)`: A 32-byte hash of the master password for data encryption.
+   - `Metadata` (borsh, fixed-size):
+     - `version` (`u32`): architecture version stored on the device.
+     - `memory_size` (`u32`): total storage size in bytes.
+     - `dump_protection` (`u8`): protection level (`low`, `medium`, `strong`).
+     - `master_password_hash` (`[u8; 32]`): master password check-hash.
    - `"\0</METADATA>\0"`: Marker for the end of metadata segment initialization.
 
 2. Segment Data:
 
-   - `<segment 1..N bytes...> (space specified in metadata)`: A sequence of segment data from the first to the Nth, each storing information saved by the user.
+   - A sequence of segment data blobs stored from low addresses upwards.
 
 3. Segment Metadata:
-   - `<segment metadata N..1>`: Sequence of segment metadata starting from the last segment and ending with the first. Each metadata entry includes:
-     - Address (4 bytes): Indicates the starting position of the segment in memory.
-     - Size (4 bytes): Determines the amount of memory occupied by the segment.
-     - Data Type (1 byte): Specifies the type of data:
-       - 0: Plain
-       - 1: Encrypted
-     - Status (1 byte): Indicates the status of the segment:
-       - 0: Deleted
-       - 1: Active
-     - Name (32 bytes): A string identifying the segment allowing the user to easily locate and manage it.
-   - `<number of segments> (4 bytes):` A number indicating the total number of segments stored on the device. Located directly before the segment metadata and occupies 4 bytes.
+   - Segment metadata is stored from high addresses downwards as fixed-size `DataInfo` entries (borsh):
+     - `name` (`[u8; 32]`)
+     - `address` (`u32`)
+     - `size` (`u32`)
+     - `data_type` (`u8` enum)
+     - `password_fingerprint_present` (`bool`) + `password_fingerprint` (`[u8; 4]`, always stored; zeroed when absent)
+     - `fingerprint` (`[u8; 4]`) + `probe` (`u8`)
+   - `segments_count` (`u32`) is stored in the last 4 bytes of the storage.
 
 ### Why This Structure is Needed?
 
