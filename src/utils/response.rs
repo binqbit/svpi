@@ -374,32 +374,34 @@ impl SvpiResponse {
                     return;
                 }
 
-                println!("{}", "=".repeat(79));
+                println!("{}", "=".repeat(93));
                 println!(
-                    "| {:32} | {:15} | {:9} | {:10} |",
-                    "Name", "Data Type", "Encrypted", "Size"
+                    "| {:32} | {:15} | {:10} | {:10} | {:10} |",
+                    "Name", "Data Type", "Size", "Hash", "Pass Hash"
                 );
-                println!("{}", "=".repeat(79));
+                println!("{}", "=".repeat(93));
+
+                let no_hash = "-".repeat(8);
                 for segment in segments {
                     let name = segment.get("name").and_then(|v| v.as_str()).unwrap_or("-");
                     let data_type = segment
                         .get("data_type")
                         .and_then(|v| v.as_str())
-                        .unwrap_or("-");
-                    let encrypted = segment
-                        .get("encrypted")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false);
+                        .unwrap_or(no_hash.as_str());
                     let size = segment.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
-
+                    let hash = segment
+                        .get("fingerprint")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(no_hash.as_str());
+                    let pass_hash = segment
+                        .get("password_fingerprint")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(no_hash.as_str());
                     println!(
-                        "| {:32} | {:15} | {:9} | {:10} |",
-                        name,
-                        data_type,
-                        if encrypted { "yes" } else { "no" },
-                        size
+                        "| {:32} | {:15} | {:10} | {:10} | {:10} |",
+                        name, data_type, size, hash, pass_hash
                     );
-                    println!("{}", "-".repeat(79));
+                    println!("{}", "-".repeat(93));
                 }
             }
             "remove" => {

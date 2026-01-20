@@ -208,13 +208,9 @@ mod tests {
             .fingerprint;
 
         mgr.link_key("test", "pwd").unwrap();
-        let new_data_fp = mgr
-            .0
-            .find_segment_by_name("test")
-            .unwrap()
-            .info
-            .password_fingerprint
-            .unwrap();
+        let new_data_seg = mgr.0.find_segment_by_name("test").unwrap();
+        assert!(new_data_seg.info.password_fingerprint.is_some());
+        let new_data_fp = new_data_seg.info.password_fingerprint.unwrap();
 
         assert_ne!(old_key_fp, new_key_fp);
         assert_eq!(new_data_fp, new_key_fp);
@@ -249,13 +245,9 @@ mod tests {
             .fingerprint;
 
         mgr.sync_encryption_keys("master").unwrap();
-        let new_data_fp = mgr
-            .0
-            .find_segment_by_name("test")
-            .unwrap()
-            .info
-            .password_fingerprint
-            .unwrap();
+        let new_data_seg = mgr.0.find_segment_by_name("test").unwrap();
+        assert!(new_data_seg.info.password_fingerprint.is_some());
+        let new_data_fp = new_data_seg.info.password_fingerprint.unwrap();
 
         assert_ne!(old_key_fp, new_key_fp);
         assert_eq!(new_data_fp, new_key_fp);

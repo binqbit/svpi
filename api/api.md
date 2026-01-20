@@ -84,10 +84,9 @@ All responses are `SvpiResponse` with `schema: "svpi.response.v1"`.
 - `segments`: array of items
   - `name`: segment name
   - `data_type`: `"plain" | "hex" | "base58" | "base64" | "binary"`
-  - `encrypted`: `true | false`
   - `size`: bytes
   - `fingerprint`: segment fingerprint (hex)
-  - `password_fingerprint`: password fingerprint (hex) or `null`
+  - `password_fingerprint`: password fingerprint (hex) or `null` (when not encrypted)
 
 ### Error Codes
 
