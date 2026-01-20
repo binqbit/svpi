@@ -10,6 +10,15 @@ pub trait DataManagerExt {
     fn read_data(&mut self, address: u32, size: usize) -> Result<Vec<u8>, DeviceError>;
     fn write_data(&mut self, address: u32, data: &[u8]) -> Result<(), DeviceError>;
 
+    fn write_zeroes(&mut self, address: u32, len: usize) -> Result<(), DeviceError> {
+        if len == 0 {
+            return Ok(());
+        }
+
+        let buffer = vec![0u8; len];
+        self.write_data(address, &buffer)
+    }
+
     fn read_value<T: Sized>(&mut self, address: u32) -> Result<T, DeviceError> {
         let size = std::mem::size_of::<T>();
         let data = self.read_data(address, size)?;
