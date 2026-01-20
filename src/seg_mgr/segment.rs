@@ -4,7 +4,7 @@ use crate::{
     data_mgr::{DataManagerExt, DeviceError},
     seg_mgr::{
         Data, DataError, DataInfo, DataManager, DataType, SegmentManager, DATA_FINGERPRINT_SIZE,
-        DATA_NAME_SIZE,
+        DATA_NAME_SIZE, SEGMENT_INFO_SIZE,
     },
 };
 
@@ -42,10 +42,6 @@ impl Segment {
 
     pub fn is_active(&self) -> bool {
         self.info.name != [0; DATA_NAME_SIZE]
-    }
-
-    pub fn disable(&mut self) {
-        self.info.name = [0; DATA_NAME_SIZE];
     }
 
     pub fn set_name(&mut self, name: &str) {
@@ -158,10 +154,20 @@ impl Segment {
     }
 
     pub fn remove(&mut self) -> Result<(), SegmentError> {
-        let zero_data = vec![0u8; self.info.size as usize];
-        self.disable();
-        self.write_data(&zero_data)?;
-        self.update_meta()
+        let address = self.info.address;
+        let size = self.info.size as usize;
+
+        self.data_mgr
+            .write_zeroes(address, size)
+            .map_err(SegmentError::WriteError)?;
+
+        self.info = DataInfo::default();
+
+        self.data_mgr
+            .write_zeroes(self.meta_address, SEGMENT_INFO_SIZE)
+            .map_err(SegmentError::UpdateInfoError)?;
+
+        Ok(())
     }
 }
 
@@ -199,5 +205,27 @@ mod tests {
             seg.remove().unwrap();
             assert!(!seg.is_active());
         }
+    }
+
+    #[test]
+    fn remove_wipes_data_and_meta() {
+        let mut mgr = setup_mgr();
+        mgr.set_segment("a", b"secret", DataType::Plain, None).unwrap();
+        let mut data_mgr = mgr.data_mgr.clone();
+
+        let (address, size, meta_address) = {
+            let seg = mgr.find_segment_by_name("a").unwrap();
+            let address = seg.info.address;
+            let size = seg.info.size as usize;
+            let meta_address = seg.meta_address;
+            seg.remove().unwrap();
+            (address, size, meta_address)
+        };
+
+        let wiped_data = data_mgr.read_data(address, size).unwrap();
+        assert_eq!(wiped_data, vec![0u8; size]);
+
+        let wiped_meta = data_mgr.read_data(meta_address, SEGMENT_INFO_SIZE).unwrap();
+        assert_eq!(wiped_meta, vec![0u8; SEGMENT_INFO_SIZE]);
     }
 }
