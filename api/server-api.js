@@ -2,36 +2,39 @@ const axios = require('axios');
 
 const api = axios.create({ baseURL: 'http://localhost:3333' });
 
+// All endpoints return SvpiResponse:
 // {
-// 	"status": "ok" | "device_not_found" | "device_error",
-// 	"version": 3
+//   "schema": "svpi.response.v1",
+//   "ok": true,
+//   "command": "api.status",
+//   "result": { ... },
+//   "meta": { "app_version": "6.0.0", "architecture_version": 8 }
+// }
+//
+// or (error):
+// {
+//   "schema": "svpi.response.v1",
+//   "ok": false,
+//   "command": "api.get",
+//   "error": { "code": "...", "message": "...", "details": { ... } },
+//   "meta": { "app_version": "6.0.0", "architecture_version": 8 }
 // }
 async function get_status() {
-	return (await api.get(`/status`)).data;
+	return (await api.get('/status')).data;
 }
 
-// {
-// 	"status": "ok" | "device_not_found" | "device_error",
-// 	"segments": [
-// 		{
-// 			"name": "name",
-// 			"data_type": "plain" | "encrypted",
-// 			"size": 123
-// 		},
-// 		...
-// 	]
-// }
 async function get_list() {
-	return (await api.get(`/list`)).data;
+	return (await api.get('/list')).data;
 }
 
-// {
-// 	"status": "ok" | "device_not_found" | "device_error" | "password_error" | "error_decode_password" | "password_not_provided" | "data_not_found" | "error_read_data",
-// 	"name": "name",
-// 	"data": "decrypted data"
-// }
-async function get_data(name, password = undefined, useRootPassword = true) {
-	return (await api.get(`/get?name=${name}` + (password ? `&password=${password}` : '') + (password ? `&use_root_rassword=${useRootPassword}` : ''))).data;
+// GET /get?name=... [&password=...]
+// Password is required only for encrypted segments.
+async function get_data(name, password = undefined) {
+	const params = { name };
+	if (password) {
+		params.password = password;
+	}
+	return (await api.get('/get', { params })).data;
 }
 
 module.exports = { get_status, get_list, get_data };

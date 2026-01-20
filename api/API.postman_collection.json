@@ -75,7 +75,7 @@
 						}
 					],
 					"cookie": [],
-					"body": "{\n    \"status\": \"found\",\n    \"version\": 3\n}"
+					"body": "{\n  \"schema\": \"svpi.response.v1\",\n  \"ok\": true,\n  \"command\": \"api.status\",\n  \"result\": {\n    \"status\": \"ok\",\n    \"architecture_version\": 8\n  },\n  \"meta\": {\n    \"app_version\": \"6.0.0\",\n    \"architecture_version\": 8\n  }\n}"
 				}
 			]
 		},
@@ -148,7 +148,7 @@
 						}
 					],
 					"cookie": [],
-					"body": "{\n    \"segments\": [\n        {\n            \"data_type\": \"encrypted\",\n            \"name\": \"data1\",\n            \"size\": 59\n        },\n        {\n            \"data_type\": \"encrypted\",\n            \"name\": \"data2\",\n            \"size\": 123\n        },\n        {\n            \"data_type\": \"encrypted\",\n            \"name\": \"data3\",\n            \"size\": 127\n        }\n    ]\n}"
+					"body": "{\n  \"schema\": \"svpi.response.v1\",\n  \"ok\": true,\n  \"command\": \"api.list\",\n  \"result\": {\n    \"segments\": [\n      {\n        \"name\": \"test\",\n        \"data_type\": \"base58\",\n        \"size\": 59,\n        \"fingerprint\": \"deadbeef\",\n        \"password_fingerprint\": \"cafebabe\"\n      },\n      {\n        \"name\": \"note\",\n        \"data_type\": \"plain\",\n        \"size\": 12,\n        \"fingerprint\": \"00112233\",\n        \"password_fingerprint\": null\n      }\n    ]\n  },\n  \"meta\": {\n    \"app_version\": \"6.0.0\",\n    \"architecture_version\": 8\n  }\n}"
 				}
 			]
 		},
@@ -158,7 +158,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost:3333/get?name=data_key&password=store_password&use_root_password=true",
+					"raw": "http://localhost:3333/get?name=data_key&password=store_password",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -175,10 +175,6 @@
 						{
 							"key": "password",
 							"value": "store_password"
-						},
-						{
-							"key": "use_root_password",
-							"value": "true"
 						}
 					]
 				}
@@ -190,7 +186,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:3333/get?name=data_key&password=store_password&use_root_password=true",
+							"raw": "http://localhost:3333/get?name=data_key&password=store_password",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -207,10 +203,6 @@
 								{
 									"key": "password",
 									"value": "store_password"
-								},
-								{
-									"key": "use_root_password",
-									"value": "true"
 								}
 							]
 						}
@@ -249,7 +241,7 @@
 						}
 					],
 					"cookie": [],
-					"body": "{\n    \"data\": \"decrypted_data\",\n    \"name\": \"data_key\"\n}"
+					"body": "{\n  \"schema\": \"svpi.response.v1\",\n  \"ok\": true,\n  \"command\": \"api.get\",\n  \"result\": {\n    \"name\": \"data_key\",\n    \"data\": \"decrypted_data\",\n    \"data_type\": \"plain\",\n    \"encrypted\": true\n  },\n  \"meta\": {\n    \"app_version\": \"6.0.0\",\n    \"architecture_version\": 8\n  }\n}"
 				}
 			]
 		}
