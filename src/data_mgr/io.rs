@@ -13,7 +13,10 @@ pub trait DataManagerExt {
     fn read_value<T: Sized>(&mut self, address: u32) -> Result<T, DeviceError> {
         let size = std::mem::size_of::<T>();
         let data = self.read_data(address, size)?;
-        let value = unsafe { std::ptr::read(data.as_ptr() as *const T) };
+        if data.len() < size {
+            return Err(DeviceError::ReadError);
+        }
+        let value = unsafe { std::ptr::read_unaligned(data.as_ptr() as *const T) };
         Ok(value)
     }
 
@@ -33,9 +36,13 @@ pub trait DataManagerExt {
                 self.read_data(address - (size * value_size) as u32, size * value_size)?
             }
         };
+        if data.len() < size * value_size {
+            return Err(DeviceError::ReadError);
+        }
         let mut result = Vec::new();
         for i in 0..size {
-            let value = unsafe { std::ptr::read(data[i * value_size..].as_ptr() as *const T) };
+            let value =
+                unsafe { std::ptr::read_unaligned(data[i * value_size..].as_ptr() as *const T) };
             result.push(value);
         }
         Ok(result)
@@ -53,16 +60,20 @@ pub trait DataManagerExt {
         values: &[T],
         record_direction: RecordDirection,
     ) -> Result<(), DeviceError> {
-        self.write_value(address, values.len())?;
+        let len: u32 = values
+            .len()
+            .try_into()
+            .map_err(|_| DeviceError::WriteError)?;
+        self.write_value(address, len)?;
         if values.is_empty() {
             return Ok(());
         }
         let value_size = std::mem::size_of::<T>();
         let mut data = Vec::new();
         for item in values {
-            let value =
+            let bytes =
                 unsafe { std::slice::from_raw_parts(item as *const T as *const u8, value_size) };
-            data.extend_from_slice(value);
+            data.extend_from_slice(bytes);
         }
         match record_direction {
             RecordDirection::Right => self.write_data(address + 4, &data),
