@@ -210,7 +210,8 @@ mod tests {
     #[test]
     fn remove_wipes_data_and_meta() {
         let mut mgr = setup_mgr();
-        mgr.set_segment("a", b"secret", DataType::Plain, None).unwrap();
+        mgr.set_segment("a", b"secret", DataType::Plain, None)
+            .unwrap();
         let mut data_mgr = mgr.data_mgr.clone();
 
         let (address, size, meta_address) = {

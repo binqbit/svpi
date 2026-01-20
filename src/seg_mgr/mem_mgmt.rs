@@ -112,10 +112,16 @@ mod tests {
             let removed_meta = seg.meta_address;
             seg.remove().unwrap();
 
-            let wiped_data = seg.data_mgr.read_data(removed_address, removed_size).unwrap();
+            let wiped_data = seg
+                .data_mgr
+                .read_data(removed_address, removed_size)
+                .unwrap();
             assert_eq!(wiped_data, vec![0u8; removed_size]);
 
-            let wiped_meta = seg.data_mgr.read_data(removed_meta, SEGMENT_INFO_SIZE).unwrap();
+            let wiped_meta = seg
+                .data_mgr
+                .read_data(removed_meta, SEGMENT_INFO_SIZE)
+                .unwrap();
             assert_eq!(wiped_meta, vec![0u8; SEGMENT_INFO_SIZE]);
         }
         let _optimized = mgr.optimize_segments().unwrap();
@@ -135,9 +141,12 @@ mod tests {
         let b_data = vec![0xBBu8; 30];
         let c_data = vec![0xCCu8; 50];
 
-        mgr.set_segment("a", &a_data, DataType::Binary, None).unwrap();
-        mgr.set_segment("b", &b_data, DataType::Binary, None).unwrap();
-        mgr.set_segment("c", &c_data, DataType::Binary, None).unwrap();
+        mgr.set_segment("a", &a_data, DataType::Binary, None)
+            .unwrap();
+        mgr.set_segment("b", &b_data, DataType::Binary, None)
+            .unwrap();
+        mgr.set_segment("c", &c_data, DataType::Binary, None)
+            .unwrap();
 
         let c_old_address = mgr.find_segment_by_name("c").unwrap().info.address;
         let c_size = mgr.find_segment_by_name("c").unwrap().info.size;

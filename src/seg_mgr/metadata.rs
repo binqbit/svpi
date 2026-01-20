@@ -208,7 +208,8 @@ mod tests {
     fn init_metadata_writes_markers_and_metadata() {
         let mut mgr =
             SegmentManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
-        mgr.init_device(512, EncryptionLevel::Low).expect("init device");
+        mgr.init_device(512, EncryptionLevel::Low)
+            .expect("init device");
 
         let mut data_mgr = mgr.data_mgr.clone();
 
@@ -225,7 +226,9 @@ mod tests {
         let version = mgr.read_architecture_version().unwrap();
         assert_eq!(version, ARCHITECTURE_VERSION);
 
-        let count = data_mgr.read_value::<u32>(mgr.segments_info_address()).unwrap();
+        let count = data_mgr
+            .read_value::<u32>(mgr.segments_info_address())
+            .unwrap();
         assert_eq!(count, 0);
 
         mgr.load_metadata().expect("load metadata");
