@@ -92,3 +92,40 @@ pub trait DataManagerExt {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data_mgr::{memory::MemoryDataManager, DataManager};
+
+    #[test]
+    fn write_zeroes_writes_expected_bytes() {
+        let mut mgr = DataManager::Memory(MemoryDataManager::new(vec![0xAA; 64]));
+
+        mgr.write_zeroes(10, 20).unwrap();
+
+        let wiped = mgr.read_data(10, 20).unwrap();
+        assert_eq!(wiped, vec![0u8; 20]);
+
+        let prefix = mgr.read_data(0, 10).unwrap();
+        assert_eq!(prefix, vec![0xAA; 10]);
+
+        let suffix = mgr.read_data(30, 34).unwrap();
+        assert_eq!(suffix, vec![0xAA; 34]);
+    }
+
+    #[test]
+    fn write_value_read_value_roundtrip_u32() {
+        let mut mgr = DataManager::Memory(MemoryDataManager::new(vec![0u8; 64]));
+
+        mgr.write_value(8, 0xDEADBEEFu32).unwrap();
+        let v: u32 = mgr.read_value(8).unwrap();
+        assert_eq!(v, 0xDEADBEEFu32);
+    }
+
+    #[test]
+    fn read_value_out_of_bounds_returns_error() {
+        let mut mgr = DataManager::Memory(MemoryDataManager::new(vec![0u8; 16]));
+        assert!(mgr.read_value::<u32>(1000).is_err());
+    }
+}

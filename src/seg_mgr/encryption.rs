@@ -205,3 +205,73 @@ impl DataType {
         Ok(data)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encryption_key_pack_unpack_roundtrip() {
+        let key = EncryptionKey {
+            key: b"secret_key".to_vec(),
+            salt: [7u8; SALT_LEN],
+            level: EncryptionLevel::Strong,
+        };
+
+        let packed = key.pack();
+        let unpacked = EncryptionKey::unpack(&packed).expect("unpack");
+
+        assert_eq!(unpacked.key, key.key);
+        assert_eq!(unpacked.salt, key.salt);
+        assert_eq!(unpacked.level, key.level);
+    }
+
+    #[test]
+    fn encryption_key_encrypt_decrypt_roundtrip() {
+        let dump_protection = EncryptionLevel::Low;
+        let mut key = EncryptionKey {
+            key: b"plaintext_key_material".to_vec(),
+            salt: [3u8; SALT_LEN],
+            level: EncryptionLevel::Medium,
+        };
+
+        let original = key.key.clone();
+        key.encrypt("pw", dump_protection).expect("encrypt");
+        assert_ne!(key.key, original);
+
+        key.decrypt("pw", dump_protection).expect("decrypt");
+        assert_eq!(key.key, original);
+    }
+
+    #[test]
+    fn encryption_key_decrypt_rejects_wrong_password() {
+        let dump_protection = EncryptionLevel::Low;
+        let mut key = EncryptionKey {
+            key: b"plaintext_key_material".to_vec(),
+            salt: [3u8; SALT_LEN],
+            level: EncryptionLevel::Medium,
+        };
+
+        key.encrypt("pw", dump_protection).expect("encrypt");
+
+        let res = key.decrypt("wrong", dump_protection);
+        assert!(matches!(res, Err(DataError::DecryptionError)));
+    }
+
+    #[test]
+    fn password_fingerprint_is_stable() {
+        let dump_protection = EncryptionLevel::Low;
+        let key = EncryptionKey {
+            key: b"key".to_vec(),
+            salt: [1u8; SALT_LEN],
+            level: EncryptionLevel::Low,
+        };
+
+        let a = key.get_password_fingerprint("pw", dump_protection);
+        let b = key.get_password_fingerprint("pw", dump_protection);
+        assert_eq!(a, b);
+
+        let c = key.get_password_fingerprint("pw2", dump_protection);
+        assert_ne!(a, c);
+    }
+}

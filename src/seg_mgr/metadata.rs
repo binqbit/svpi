@@ -197,3 +197,56 @@ impl SegmentManager {
         self.metadata.master_password_hash == hash
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data_mgr::{DataInterfaceType, DataManagerExt};
+    use crate::seg_mgr::DataType;
+
+    #[test]
+    fn init_metadata_writes_markers_and_metadata() {
+        let mut mgr =
+            SegmentManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
+        mgr.init_device(512, EncryptionLevel::Low).expect("init device");
+
+        let mut data_mgr = mgr.data_mgr.clone();
+
+        let start = data_mgr
+            .read_data(mgr.start_init_data_address(), START_INIT_DATA.len())
+            .unwrap();
+        assert_eq!(start, START_INIT_DATA);
+
+        let end = data_mgr
+            .read_data(mgr.end_init_data_address(), END_INIT_DATA.len())
+            .unwrap();
+        assert_eq!(end, END_INIT_DATA);
+
+        let version = mgr.read_architecture_version().unwrap();
+        assert_eq!(version, ARCHITECTURE_VERSION);
+
+        let count = data_mgr.read_value::<u32>(mgr.segments_info_address()).unwrap();
+        assert_eq!(count, 0);
+
+        mgr.load_metadata().expect("load metadata");
+        assert_eq!(mgr.metadata.memory_size, 512);
+        assert_eq!(mgr.metadata.dump_protection, EncryptionLevel::Low);
+    }
+
+    #[test]
+    fn try_load_roundtrip_after_init() {
+        let mut mgr =
+            SegmentManager::from_device_type(DataInterfaceType::Memory(vec![])).expect("init");
+        mgr.init_device(1024, EncryptionLevel::Medium)
+            .expect("init device");
+        mgr.set_segment("a", b"hi", DataType::Plain, None)
+            .expect("set segment");
+
+        let dump = mgr.get_dump().expect("dump");
+
+        let mut loaded = SegmentManager::try_load(DataInterfaceType::Memory(dump)).expect("load");
+        assert_eq!(loaded.metadata.memory_size, 1024);
+        assert_eq!(loaded.metadata.dump_protection, EncryptionLevel::Medium);
+        assert!(loaded.find_segment_by_name("a").is_some());
+    }
+}

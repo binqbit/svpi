@@ -181,3 +181,67 @@ pub fn derive_encryption_key(
         .with_protection_level(dump_protection);
     password_hash(master_password, salt, &kdf_params)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encrypt_decrypt_roundtrip() {
+        let params = KdfParams {
+            m_cost_kib: LOW_KDF_M_COST_KIB,
+            t_cost: LOW_KDF_T_COST,
+            p_cost: LOW_KDF_P_COST,
+        };
+
+        let data = b"hello world";
+        let password = b"pw";
+
+        let blob = encrypt(data, password, &params).expect("encrypt");
+        let plaintext = decrypt(&blob, password, &params).expect("decrypt");
+        assert_eq!(plaintext, data);
+    }
+
+    #[test]
+    fn decrypt_rejects_wrong_password() {
+        let params = KdfParams {
+            m_cost_kib: LOW_KDF_M_COST_KIB,
+            t_cost: LOW_KDF_T_COST,
+            p_cost: LOW_KDF_P_COST,
+        };
+
+        let data = b"top secret";
+        let blob = encrypt(data, b"pw", &params).expect("encrypt");
+        assert!(decrypt(&blob, b"wrong", &params).is_none());
+    }
+
+    #[test]
+    fn decrypt_rejects_short_blob() {
+        let params = KdfParams {
+            m_cost_kib: LOW_KDF_M_COST_KIB,
+            t_cost: LOW_KDF_T_COST,
+            p_cost: LOW_KDF_P_COST,
+        };
+
+        assert!(decrypt(&[], b"pw", &params).is_none());
+        assert!(decrypt(&[0u8; SALT_LEN + NONCE_LEN - 1], b"pw", &params).is_none());
+    }
+
+    #[test]
+    fn master_password_check_is_deterministic() {
+        let a = get_master_password_check(b"master", EncryptionLevel::Low);
+        let b = get_master_password_check(b"master", EncryptionLevel::Low);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn derive_encryption_key_depends_on_salt() {
+        let salt1 = [1u8; SALT_LEN];
+        let salt2 = [2u8; SALT_LEN];
+
+        let a = derive_encryption_key(b"master", &salt1, EncryptionLevel::Low);
+        let b = derive_encryption_key(b"master", &salt2, EncryptionLevel::Low);
+
+        assert_ne!(a, b);
+    }
+}
