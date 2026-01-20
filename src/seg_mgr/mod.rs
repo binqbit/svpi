@@ -17,8 +17,8 @@ pub use metadata::*;
 pub use segment::*;
 
 pub const ARCHITECTURE_VERSION: u32 = 8;
-pub const METADATA_SIZE: usize = std::mem::size_of::<Metadata>();
-pub const SEGMENT_INFO_SIZE: usize = std::mem::size_of::<DataInfo>();
+pub const METADATA_SIZE: usize = Metadata::SIZE;
+pub const SEGMENT_INFO_SIZE: usize = DataInfo::SIZE;
 
 #[derive(Error, Debug)]
 pub enum DataManagerError {
@@ -92,5 +92,37 @@ impl SegmentManager {
             .map_err(DataManagerError::DeviceError)?;
 
         Ok(seg_mgr)
+    }
+}
+
+mod tests {
+    #[allow(unused)]
+    use super::*;
+
+    #[test]
+    fn test_metadata_size() {
+        let metadata = Metadata::default();
+        let packed = metadata.pack();
+        assert_eq!(packed.len(), METADATA_SIZE, "Metadata size mismatch");
+    }
+
+    #[test]
+    fn test_data_info_size() {
+        let plain = DataInfo::default();
+        let plain_packed = plain.pack();
+        assert_eq!(
+            plain_packed.len(),
+            SEGMENT_INFO_SIZE,
+            "DataInfo size mismatch"
+        );
+
+        let mut encrypted = DataInfo::default();
+        encrypted.password_fingerprint = Some([1, 2, 3, 4]);
+        let encrypted_packed = encrypted.pack();
+        assert_eq!(
+            encrypted_packed.len(),
+            SEGMENT_INFO_SIZE,
+            "DataInfo size mismatch (encrypted)"
+        );
     }
 }

@@ -1,8 +1,10 @@
 use base58::{FromBase58, ToBase58};
 use base64::Engine;
+use borsh::{BorshDeserialize, BorshSerialize};
 use borsh_derive::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::io::{Read, Write};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -10,10 +12,11 @@ pub const DATA_NAME_SIZE: usize = 32;
 pub const DATA_FINGERPRINT_SIZE: usize = 4;
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, BorshSerialize, BorshDeserialize, Serialize, Deserialize,
+    Debug, Default, Clone, Copy, PartialEq, BorshSerialize, BorshDeserialize, Serialize, Deserialize,
 )]
 #[serde(rename_all = "lowercase")]
 pub enum DataType {
+    #[default]
     Binary,
     Plain,
     Hex,
@@ -32,18 +35,22 @@ pub enum Data {
     Base64(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct DataFingerprint {
     pub fingerprint: [u8; DATA_FINGERPRINT_SIZE],
     pub probe: u8,
 }
 
-#[derive(Debug, Clone, Copy, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Default, Clone, Copy, BorshSerialize, BorshDeserialize)]
 pub struct DataInfo {
     pub name: [u8; DATA_NAME_SIZE],
     pub address: u32,
     pub size: u32,
     pub data_type: DataType,
+    #[borsh(
+        serialize_with = "Self::serialize_password_fingerprint",
+        deserialize_with = "Self::deserialize_password_fingerprint"
+    )]
     pub password_fingerprint: Option<[u8; DATA_FINGERPRINT_SIZE]>,
     pub fingerprint: DataFingerprint,
 }
@@ -185,6 +192,29 @@ impl FromStr for DataType {
 }
 
 impl DataInfo {
+    pub const SIZE: usize =
+        DATA_NAME_SIZE + 4 + 4 + 1 + 1 + DATA_FINGERPRINT_SIZE + DATA_FINGERPRINT_SIZE + 1;
+
+    fn serialize_password_fingerprint<W: Write>(
+        value: &Option<[u8; DATA_FINGERPRINT_SIZE]>,
+        writer: &mut W,
+    ) -> std::io::Result<()> {
+        let has_value = value.is_some();
+        BorshSerialize::serialize(&has_value, writer)?;
+
+        let data = value.unwrap_or([0; DATA_FINGERPRINT_SIZE]);
+        BorshSerialize::serialize(&data, writer)?;
+        Ok(())
+    }
+
+    fn deserialize_password_fingerprint<R: Read>(
+        reader: &mut R,
+    ) -> std::io::Result<Option<[u8; DATA_FINGERPRINT_SIZE]>> {
+        let has_value = bool::deserialize_reader(reader)?;
+        let data = <[u8; DATA_FINGERPRINT_SIZE]>::deserialize_reader(reader)?;
+        Ok(if has_value { Some(data) } else { None })
+    }
+
     pub fn new(
         name_str: &str,
         address: u32,
@@ -207,6 +237,17 @@ impl DataInfo {
             password_fingerprint,
             fingerprint,
         }
+    }
+
+    pub fn pack(&self) -> Vec<u8> {
+        let mut buffer = Vec::new();
+        self.serialize(&mut buffer)
+            .expect("Failed to serialize DataInfo");
+        buffer
+    }
+
+    pub fn unpack(data: &[u8]) -> Result<Self, DataError> {
+        DataInfo::try_from_slice(data).map_err(|_| DataError::UnpackError)
     }
 }
 

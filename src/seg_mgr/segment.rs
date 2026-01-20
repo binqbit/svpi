@@ -141,8 +141,9 @@ impl Segment {
     }
 
     pub fn update_meta(&mut self) -> Result<(), SegmentError> {
+        let data = self.info.pack();
         self.data_mgr
-            .write_value(self.meta_address, self.info)
+            .write_data(self.meta_address, &data)
             .map_err(SegmentError::UpdateInfoError)
     }
 

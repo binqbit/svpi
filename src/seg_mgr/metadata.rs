@@ -2,8 +2,8 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use borsh_derive::{BorshDeserialize, BorshSerialize};
 
 use crate::{
-    data_mgr::{DataManagerExt, DeviceError, RecordDirection},
-    seg_mgr::{DataError, DataInfo, SegmentError, METADATA_SIZE},
+    data_mgr::{DataManagerExt, DeviceError},
+    seg_mgr::{DataError, DataInfo, SegmentError, METADATA_SIZE, SEGMENT_INFO_SIZE},
 };
 
 use super::{EncryptionLevel, Segment, SegmentManager, ARCHITECTURE_VERSION};
@@ -21,6 +21,8 @@ pub struct Metadata {
 }
 
 impl Metadata {
+    pub const SIZE: usize = 4 + 4 + 1 + MASTER_PASSWORD_HASH_SIZE;
+
     pub fn pack(&self) -> Vec<u8> {
         let mut buffer = Vec::new();
         self.serialize(&mut buffer)
@@ -95,7 +97,8 @@ impl SegmentManager {
     }
 
     pub fn save_segment_meta(&mut self, seg: &Segment) -> Result<(), DeviceError> {
-        self.data_mgr.write_value(seg.meta_address, seg.info)
+        let data = seg.info.pack();
+        self.data_mgr.write_data(seg.meta_address, &data)
     }
 
     pub fn add_segment_meta(&mut self, segment: Segment) -> Result<(), DeviceError> {
@@ -106,14 +109,33 @@ impl SegmentManager {
     }
 
     pub fn load_segments(&mut self) -> Result<(), DeviceError> {
-        let data_infos = self
-            .data_mgr
-            .read_values::<DataInfo>(self.segments_info_address(), RecordDirection::Left)?;
         self.segments.clear();
-        for (i, info) in data_infos.into_iter().rev().enumerate() {
-            let meta_address = self.segment_meta_address(i as u32);
+
+        let count = self
+            .data_mgr
+            .read_value::<u32>(self.segments_info_address())? as usize;
+        if count == 0 {
+            return Ok(());
+        }
+
+        let total_size = count
+            .checked_mul(SEGMENT_INFO_SIZE)
+            .ok_or(DeviceError::ReadError)?;
+        let start_address = self
+            .segments_info_address()
+            .checked_sub(total_size as u32)
+            .ok_or(DeviceError::ReadError)?;
+
+        let data = self.data_mgr.read_data(start_address, total_size)?;
+        if data.len() < total_size {
+            return Err(DeviceError::ReadError);
+        }
+
+        for (i, chunk) in data.chunks_exact(SEGMENT_INFO_SIZE).enumerate() {
+            let info = DataInfo::unpack(chunk).map_err(|_| DeviceError::ReadError)?;
+            let meta_address = start_address + (i as u32) * SEGMENT_INFO_SIZE as u32;
             let segment = Segment::new(self.data_mgr.clone(), meta_address, info);
-            self.segments.insert(0, segment);
+            self.segments.push(segment);
         }
         Ok(())
     }

@@ -6,7 +6,6 @@ use crate::seg_mgr::{Data, DataType, Segment};
 pub struct SegmentSummary {
     pub name: String,
     pub data_type: String,
-    pub encrypted: bool,
     pub size: u32,
     pub fingerprint: String,
     pub password_fingerprint: Option<String>,
@@ -22,7 +21,6 @@ impl SegmentSummary {
         Self {
             name: seg.get_name(),
             data_type: seg.info.data_type.to_string(),
-            encrypted: seg.info.password_fingerprint.is_some(),
             size: seg.info.size,
             fingerprint: seg.info.fingerprint.to_string(),
             password_fingerprint,
