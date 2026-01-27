@@ -78,7 +78,11 @@ impl SegmentManager {
         } else {
             return Ok(None);
         };
-        let meta_address = self.segment_meta_address(self.segments.len() as u32);
+        
+        if let Some(old_seg) = self.find_segment_by_name(name) {
+            old_seg.remove()?;
+        }
+
         let info = DataInfo::new(
             name,
             address,
@@ -88,14 +92,12 @@ impl SegmentManager {
             &self
                 .segments
                 .iter()
+                .filter(|s| s.is_active())
                 .map(|s| s.info.fingerprint)
                 .collect::<Vec<_>>(),
         );
 
-        if let Some(old_seg) = self.find_segment_by_name(name) {
-            old_seg.remove()?;
-        }
-
+        let meta_address = self.segment_meta_address(self.segments.len() as u32);
         let mut segment = Segment::new(self.data_mgr.clone(), meta_address, info);
         segment.write_data(&data)?;
         self.add_segment_meta(segment)
