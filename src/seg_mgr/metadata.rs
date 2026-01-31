@@ -2,7 +2,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use borsh_derive::{BorshDeserialize, BorshSerialize};
 
 use crate::{
-    data_mgr::{DataManagerExt, DeviceError},
+    data_mgr::{DataManager, DataManagerExt, DeviceError},
     seg_mgr::{DataError, DataInfo, SegmentError, METADATA_SIZE, SEGMENT_INFO_SIZE},
 };
 
@@ -172,16 +172,41 @@ impl SegmentManager {
     }
 
     pub fn check_init_data(&mut self) -> Result<bool, DeviceError> {
+        let allow_short_read = matches!(
+            &self.data_mgr,
+            DataManager::FileSystem(_) | DataManager::Memory(_)
+        );
+
         let start = self
             .data_mgr
-            .read_data(self.start_init_data_address(), START_INIT_DATA.len())?;
+            .read_data(self.start_init_data_address(), START_INIT_DATA.len())
+            .or_else(|err| {
+                if allow_short_read && matches!(err, DeviceError::ReadError) {
+                    Ok(vec![])
+                } else {
+                    Err(err)
+                }
+            })?;
+        if start.is_empty() {
+            return Ok(false);
+        }
         if start != START_INIT_DATA {
             return Ok(false);
         }
 
         let end = self
             .data_mgr
-            .read_data(self.end_init_data_address(), END_INIT_DATA.len())?;
+            .read_data(self.end_init_data_address(), END_INIT_DATA.len())
+            .or_else(|err| {
+                if allow_short_read && matches!(err, DeviceError::ReadError) {
+                    Ok(vec![])
+                } else {
+                    Err(err)
+                }
+            })?;
+        if end.is_empty() {
+            return Ok(false);
+        }
         if end != END_INIT_DATA {
             return Ok(false);
         }
