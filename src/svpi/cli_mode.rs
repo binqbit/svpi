@@ -91,26 +91,20 @@ fn sha256_file_hex(path: &Path) -> std::io::Result<String> {
 fn run_repl(cli: &cli::CliArgs) -> i32 {
     let mut interface_type_default = cli.interface_type();
     let confirm_base = cli.confirm;
-
-    let stdin = std::io::stdin();
-    let mut line = String::new();
+    let mut reader = terminal::ReplReader::new();
 
     loop {
-        print!("svpi> ");
-        let _ = std::io::stdout().flush();
-
-        line.clear();
-        match stdin.read_line(&mut line) {
-            Ok(0) => {
+        let line = match reader.read_line("svpi> ") {
+            Ok(Some(v)) => v,
+            Ok(None) => {
                 println!();
                 break;
             }
-            Ok(_) => {}
             Err(err) => {
                 eprintln!("device_error: Failed to read command: {err}");
                 return 1;
             }
-        }
+        };
 
         let input = line.trim();
         if input.is_empty() {
@@ -122,6 +116,7 @@ fn run_repl(cli: &cli::CliArgs) -> i32 {
             break;
         }
         if matches!(lowered.as_str(), "clear" | "cls") {
+            reader.clear_history();
             if std::io::stdout().is_terminal() {
                 print!("\x1B[3J\x1B[2J");
                 print!("\x1B[3J\x1B[H");
@@ -129,6 +124,8 @@ fn run_repl(cli: &cli::CliArgs) -> i32 {
             }
             continue;
         }
+
+        reader.add_history_entry(input);
 
         let Some(tokens) = shlex::split(input) else {
             eprintln!("invalid_argument: Failed to parse command line");
