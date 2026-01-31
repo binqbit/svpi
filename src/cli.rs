@@ -12,7 +12,7 @@ use crate::{
     name = "svpi",
     version = env!("CARGO_PKG_VERSION"),
     disable_help_subcommand = true,
-    after_help = "Examples:\n  svpi --mode=cli list\n  svpi --mode=json get my-secret --password=123\n  svpi --mode=server --auto-exit\n\nNote: flags like --mode and --file require '=' (e.g. --mode=json)."
+    after_help = "Examples:\n  svpi\n  svpi --mode=cli list\n  svpi --mode=json get my-secret --password=123\n  svpi --mode=server --auto-exit\n\nNote: flags like --mode and --file require '=' (e.g. --mode=json)."
 )]
 pub struct CliArgs {
     #[arg(

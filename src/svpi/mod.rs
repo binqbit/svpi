@@ -1,6 +1,7 @@
 pub mod cli_mode;
 
 pub const HELP_COMMANDS: &[(&str, &str)] = &[
+    ("svpi", "Start interactive command prompt (CLI mode)"),
     (
         "svpi init / i <memory_size> [low|medium|strong|hardened]",
         "Initialize the device for the desired architecture",

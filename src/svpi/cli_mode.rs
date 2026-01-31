@@ -1,10 +1,11 @@
 use std::{
     fs,
-    io::{ErrorKind, Read},
+    io::{ErrorKind, IsTerminal, Read, Write},
     path::Path,
 };
 
 use arboard::Clipboard;
+use clap::Parser;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -86,10 +87,93 @@ fn sha256_file_hex(path: &Path) -> std::io::Result<String> {
     Ok(hex::encode(hasher.finalize()))
 }
 
+fn run_repl(cli: &cli::CliArgs) -> i32 {
+    let interface_type_base = cli.interface_type();
+    let confirm_base = cli.confirm;
+
+    let stdin = std::io::stdin();
+    let mut line = String::new();
+
+    loop {
+        print!("svpi> ");
+        let _ = std::io::stdout().flush();
+
+        line.clear();
+        match stdin.read_line(&mut line) {
+            Ok(0) => {
+                println!();
+                break;
+            }
+            Ok(_) => {}
+            Err(err) => {
+                eprintln!("device_error: Failed to read command: {err}");
+                return 1;
+            }
+        }
+
+        let input = line.trim();
+        if input.is_empty() {
+            continue;
+        }
+
+        let lowered = input.to_ascii_lowercase();
+        if matches!(lowered.as_str(), "exit" | "quit" | "q") {
+            break;
+        }
+        if matches!(lowered.as_str(), "clear" | "cls") {
+            if std::io::stdout().is_terminal() {
+                print!("\x1B[3J\x1B[2J");
+                print!("\x1B[3J\x1B[H");
+                let _ = std::io::stdout().flush();
+            }
+            continue;
+        }
+
+        let Some(tokens) = shlex::split(input) else {
+            eprintln!("invalid_argument: Failed to parse command line");
+            continue;
+        };
+
+        let mut argv = Vec::with_capacity(tokens.len() + 1);
+        argv.push("svpi".to_string());
+        argv.extend(tokens);
+
+        let parsed = match cli::CliArgs::try_parse_from(argv) {
+            Ok(v) => v,
+            Err(err) => {
+                eprintln!("{err}");
+                continue;
+            }
+        };
+
+        if parsed.mode != cli::Mode::Cli {
+            eprintln!("invalid_argument: --mode is not supported in interactive mode");
+            continue;
+        }
+
+        let interface_type = if parsed.file.is_some() {
+            parsed.interface_type()
+        } else {
+            interface_type_base.clone()
+        };
+        let confirm = confirm_base || parsed.confirm;
+
+        let cmd = parsed.command.unwrap_or(cli::Command::Help);
+        let (resp, _code) = execute_with_output(cmd, OutputFormat::Cli, &interface_type, confirm);
+        resp.print(OutputFormat::Cli);
+    }
+
+    0
+}
+
 pub fn run_with_cli(cli: &cli::CliArgs) -> i32 {
     let output_mode = cli.output_format();
     let interface_type = cli.interface_type();
     let confirm = cli.confirm;
+
+    if output_mode == OutputFormat::Cli && cli.command.is_none() {
+        return run_repl(cli);
+    }
 
     let command = cli.command.clone().unwrap_or(cli::Command::Help);
     let (resp, code) = execute_with_output(command, output_mode, &interface_type, confirm);
