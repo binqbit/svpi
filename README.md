@@ -29,7 +29,7 @@ Technical documentation lives in `docs/`:
 SVPI is a Rust project. For a production build, use the provided scripts:
 
 - Linux/macOS: [build.sh](./build.sh) (builds `--release`, copies `svpi` to `./bin/`)
-- Windows: [build.bat](./build.bat) (builds `--release`, copies `svpi.exe` to `./bin\\`)
+- Windows: [build.bat](./build.bat) (builds `--release`, copies `svpi.exe` to `./bin/`)
 
 ## Related repositories
 
