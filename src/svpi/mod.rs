@@ -55,6 +55,10 @@ pub const HELP_COMMANDS: &[(&str, &str)] = &[
         "svpi change-password / cp <name>",
         "Change data password (omit new password to remove encryption)",
     ),
+    (
+        "svpi self-hash / hash",
+        "Print SHA-256 of the running executable",
+    ),
     ("svpi version / v", "Print the version of the application"),
     ("svpi help / h", "Print this help message"),
     ("svpi --mode=server", "Start the API server"),

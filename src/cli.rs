@@ -128,6 +128,13 @@ pub enum Command {
     #[command(name = "version", alias = "v", about = "Print application version")]
     Version,
 
+    #[command(
+        name = "self-hash",
+        alias = "hash",
+        about = "Print SHA-256 of the running executable"
+    )]
+    SelfHash,
+
     #[command(name = "init", alias = "i", about = "Initialize the device memory")]
     Init {
         #[arg(value_name = "MEMORY_SIZE", help = "Device memory size in bytes")]

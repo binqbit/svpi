@@ -1,7 +1,12 @@
-use std::{fs, io::ErrorKind, path::Path};
+use std::{
+    fs,
+    io::{ErrorKind, Read},
+    path::Path,
+};
 
 use arboard::Clipboard;
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 
 use crate::{
     cli,
@@ -64,6 +69,23 @@ fn confirm_or_require_confirm(
     }
 }
 
+fn sha256_file_hex(path: &Path) -> std::io::Result<String> {
+    let mut file = fs::File::open(path)?;
+
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 64 * 1024];
+
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+
+    Ok(hex::encode(hasher.finalize()))
+}
+
 pub fn run_with_cli(cli: &cli::CliArgs) -> i32 {
     let output_mode = cli.output_format();
     let interface_type = cli.interface_type();
@@ -81,6 +103,7 @@ fn command_name(cmd: &cli::Command) -> &'static str {
     match cmd {
         cli::Command::Help => "help",
         cli::Command::Version => "version",
+        cli::Command::SelfHash => "self-hash",
         cli::Command::Init { .. } => "init",
         cli::Command::Check => "check",
         cli::Command::Format => "format",
@@ -139,6 +162,38 @@ fn execute_with_output(
             ),
             0,
         ),
+        cli::Command::SelfHash => {
+            let exe_path = match std::env::current_exe() {
+                Ok(v) => v,
+                Err(err) => {
+                    return SvpiResponse::err(
+                        cmd_out.clone(),
+                        "internal_error",
+                        format!("Failed to resolve current executable path: {err}"),
+                        None,
+                    )
+                    .with_exit_code();
+                }
+            };
+
+            let hash = match sha256_file_hex(&exe_path) {
+                Ok(v) => v,
+                Err(err) => {
+                    return SvpiResponse::err(
+                        cmd_out.clone(),
+                        "internal_error",
+                        format!("Failed to hash executable: {err}"),
+                        Some(json!({ "path": exe_path.to_string_lossy() })),
+                    )
+                    .with_exit_code();
+                }
+            };
+
+            (
+                SvpiResponse::ok(cmd_out, json!({ "data": hash, "algo": "sha256" })),
+                0,
+            )
+        }
 
         cli::Command::Init {
             memory_size,
