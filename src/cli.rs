@@ -335,7 +335,7 @@ pub struct SetArgs {
 
     #[arg(
         value_name = "DATA",
-        help = "Data value (optional in CLI: reads clipboard if omitted; required in --mode=json)"
+        help = "Data value (JSON byte array or binary from file path allowed; optional in CLI: reads clipboard if omitted; required in --mode=json)"
     )]
     pub data: Option<String>,
 

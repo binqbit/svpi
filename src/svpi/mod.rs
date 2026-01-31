@@ -40,7 +40,10 @@ pub const HELP_COMMANDS: &[(&str, &str)] = &[
         "Synchronize encryption keys fingerprints",
     ),
     ("svpi list / l", "Print all data list"),
-    ("svpi set / s <name> <data>", "Set data"),
+    (
+        "svpi set / s <name> <data>",
+        "Set data (string, JSON byte array or binary from file)",
+    ),
     ("svpi get / g <name>", "Get data"),
     ("svpi remove / r <name>", "Remove data"),
     ("svpi rename / rn <old_name> <new_name>", "Rename data"),

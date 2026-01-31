@@ -78,7 +78,7 @@ impl SegmentManager {
         } else {
             return Ok(None);
         };
-        
+
         if let Some(old_seg) = self.find_segment_by_name(name) {
             old_seg.remove()?;
         }

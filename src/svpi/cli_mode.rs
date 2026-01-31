@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, io::ErrorKind, path::Path};
 
 use arboard::Clipboard;
 use serde_json::{json, Value};
@@ -830,7 +830,66 @@ fn execute_with_output(
         cli::Command::Set(args) => {
             let name = args.name;
             let data = match args.data {
-                Some(v) => v,
+                Some(data) => {
+                    let path = Path::new(&data);
+                    match fs::metadata(path) {
+                        Ok(meta) => {
+                            if !meta.is_file() {
+                                return SvpiResponse::err(
+                                    cmd_out,
+                                    "invalid_argument",
+                                    "Path is not a file",
+                                    Some(json!({ "path": data })),
+                                )
+                                .with_exit_code();
+                            }
+                            let data = match fs::read(path) {
+                                Ok(v) => v,
+                                Err(err) => {
+                                    return SvpiResponse::err(
+                                        cmd_out,
+                                        "io_error",
+                                        err.to_string(),
+                                        Some(json!({ "file": data })),
+                                    )
+                                    .with_exit_code()
+                                }
+                            };
+                            match serde_json::from_slice::<Value>(&data) {
+                                Ok(Value::Array(values)) => {
+                                    let mut bytes = Vec::with_capacity(values.len());
+                                    for (index, value) in values.iter().enumerate() {
+                                        let Some(byte) =
+                                            value.as_u64().and_then(|v| u8::try_from(v).ok())
+                                        else {
+                                            return SvpiResponse::err(
+                                                cmd_out,
+                                                "invalid_argument",
+                                                "JSON array must contain integers in range 0..=255",
+                                                Some(json!({ "index": index, "value": value })),
+                                            )
+                                            .with_exit_code();
+                                        };
+                                        bytes.push(byte);
+                                    }
+                                    hex::encode(bytes)
+                                }
+                                Ok(Value::String(value)) => value,
+                                _ => hex::encode(data),
+                            }
+                        }
+                        Err(err) if err.kind() == ErrorKind::NotFound => data,
+                        Err(err) => {
+                            return SvpiResponse::err(
+                                cmd_out,
+                                "io_error",
+                                err.to_string(),
+                                Some(json!({ "file": data })),
+                            )
+                            .with_exit_code()
+                        }
+                    }
+                }
                 None if output_mode == OutputFormat::Cli => {
                     let mut clipboard = match Clipboard::new() {
                         Ok(v) => v,
