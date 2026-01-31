@@ -212,11 +212,11 @@ impl SvpiResponse {
                     .unwrap_or(".svpi");
                 let cfg_hash = result.get("config_hash").and_then(|v| v.as_str());
 
-                println!("app: {app_hash}");
+                println!("{:15}{}", "app:", app_hash);
                 if let Some(h) = cfg_hash {
-                    println!("config({cfg}): {h}");
+                    println!("{:15}{}", format!("config({cfg}):"), h);
                 } else {
-                    println!("config({cfg}): (not found)");
+                    println!("{:15}{}", format!("config({cfg}):"), "(not found)");
                 }
             }
             "init" => {
