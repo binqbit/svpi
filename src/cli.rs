@@ -93,10 +93,17 @@ impl CliArgs {
     }
 
     pub fn interface_type(&self) -> DataInterfaceType {
-        self.file
-            .as_ref()
-            .map(|path| DataInterfaceType::FileSystem(path.clone()))
-            .unwrap_or_default()
+        if let Some(path) = self.file.as_ref() {
+            return DataInterfaceType::FileSystem(path.clone());
+        }
+
+        if let Ok(Some(cfg)) = crate::config::SvpiConfig::load_from_cwd() {
+            if let Some(path) = cfg.file {
+                return DataInterfaceType::FileSystem(path);
+            }
+        }
+
+        DataInterfaceType::default()
     }
 }
 
@@ -134,6 +141,16 @@ pub enum Command {
         about = "Print SHA-256 of the running executable"
     )]
     SelfHash,
+
+    #[command(
+        name = "set-file",
+        alias = "sf",
+        about = "Set default file storage path (writes .svpi config)"
+    )]
+    SetFile {
+        #[arg(value_name = "FILE", help = "Default file path for storage")]
+        file_name: String,
+    },
 
     #[command(name = "init", alias = "i", about = "Initialize the device memory")]
     Init {

@@ -362,6 +362,14 @@ impl SvpiResponse {
                 println!("Encryption key '{name}' linked.");
             }
             "sync-keys" => println!("Encryption keys synchronized."),
+            "set-file" => {
+                let file = result.get("file").and_then(|v| v.as_str()).unwrap_or("-");
+                let cfg = result
+                    .get("config_file")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".svpi");
+                println!("Default vault file set to '{file}' (saved in {cfg}).");
+            }
             "set" => {
                 let name = result.get("name").and_then(|v| v.as_str()).unwrap_or("-");
                 let data_type = result

@@ -2,3 +2,5 @@
 Cargo.lock
 /bin/svpi.exe
 /bin/svpi
+.svpi
+test.bin

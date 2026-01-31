@@ -11,6 +11,7 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     cli,
+    config::CONFIG_FILE_NAME,
     data_mgr::DataInterfaceType,
     pass_mgr::PasswordManager,
     protocol::segments::SegmentSummary,
@@ -88,7 +89,7 @@ fn sha256_file_hex(path: &Path) -> std::io::Result<String> {
 }
 
 fn run_repl(cli: &cli::CliArgs) -> i32 {
-    let interface_type_base = cli.interface_type();
+    let mut interface_type_default = cli.interface_type();
     let confirm_base = cli.confirm;
 
     let stdin = std::io::stdin();
@@ -154,13 +155,25 @@ fn run_repl(cli: &cli::CliArgs) -> i32 {
         let interface_type = if parsed.file.is_some() {
             parsed.interface_type()
         } else {
-            interface_type_base.clone()
+            interface_type_default.clone()
         };
         let confirm = confirm_base || parsed.confirm;
 
         let cmd = parsed.command.unwrap_or(cli::Command::Help);
+        let update_default_interface = match &cmd {
+            cli::Command::SetFile { file_name } => {
+                Some(DataInterfaceType::FileSystem(file_name.clone()))
+            }
+            _ => None,
+        };
         let (resp, _code) = execute_with_output(cmd, OutputFormat::Cli, &interface_type, confirm);
         resp.print(OutputFormat::Cli);
+
+        if resp.ok {
+            if let Some(v) = update_default_interface {
+                interface_type_default = v;
+            }
+        }
     }
 
     0
@@ -188,6 +201,7 @@ fn command_name(cmd: &cli::Command) -> &'static str {
         cli::Command::Help => "help",
         cli::Command::Version => "version",
         cli::Command::SelfHash => "self-hash",
+        cli::Command::SetFile { .. } => "set-file",
         cli::Command::Init { .. } => "init",
         cli::Command::Check => "check",
         cli::Command::Format => "format",
@@ -275,6 +289,39 @@ fn execute_with_output(
 
             (
                 SvpiResponse::ok(cmd_out, json!({ "data": hash, "algo": "sha256" })),
+                0,
+            )
+        }
+        cli::Command::SetFile { file_name } => {
+            if file_name.trim().is_empty() {
+                return SvpiResponse::missing_argument(cmd_out, "file").with_exit_code();
+            }
+
+            let mut cfg = crate::config::SvpiConfig::load_from_cwd()
+                .ok()
+                .flatten()
+                .unwrap_or_default();
+            cfg.mode = match output_mode {
+                OutputFormat::Cli => 0,
+                OutputFormat::Json => 1,
+            };
+            cfg.file = Some(file_name.clone());
+
+            if let Err(err) = cfg.save_to_cwd() {
+                return SvpiResponse::err(
+                    cmd_out.clone(),
+                    "device_error",
+                    format!("Failed to write {CONFIG_FILE_NAME} config: {err}"),
+                    None,
+                )
+                .with_exit_code();
+            }
+
+            (
+                SvpiResponse::ok(
+                    cmd_out,
+                    json!({ "data": file_name, "file": file_name, "config_file": CONFIG_FILE_NAME }),
+                ),
                 0,
             )
         }
