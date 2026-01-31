@@ -17,6 +17,7 @@ SRWP).
 
 Technical documentation lives in `docs/`:
 
+- [docs/install.md](docs/install.md) — quickstart setup (file-backed vault)
 - [docs/architecture.md](docs/architecture.md) — storage layout, segment metadata, encoding rules
 - [docs/security.md](docs/security.md) — security model and protection levels
 - [docs/master-password.md](docs/master-password.md) — master password, encryption keys, recovery/rotation
