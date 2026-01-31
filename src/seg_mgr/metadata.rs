@@ -54,6 +54,7 @@ impl SegmentManager {
     pub fn init_metadata(&mut self) -> Result<(), DeviceError> {
         self.data_mgr
             .init_memory(self.metadata.memory_size as usize)?;
+        self.format_data()?;
         self.data_mgr
             .write_data(self.start_init_data_address(), START_INIT_DATA)?;
         self.data_mgr
@@ -141,8 +142,8 @@ impl SegmentManager {
     }
 
     pub fn format_data(&mut self) -> Result<(), DeviceError> {
-        let data = vec![0u8; self.metadata.memory_size as usize];
-        self.data_mgr.write_data(0, &data)
+        self.data_mgr
+            .write_zeroes(0, self.metadata.memory_size as usize)
     }
 
     pub fn get_active_segments<'a>(&'a self) -> Vec<&'a Segment> {

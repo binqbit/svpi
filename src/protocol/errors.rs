@@ -43,6 +43,9 @@ impl SvpiResponse {
             DataManagerError::DeviceNotFound(_) => {
                 SvpiResponse::err(cmd, "device_not_found", "Device not found", None)
             }
+            DataManagerError::InvalidArgument(message) => {
+                SvpiResponse::invalid_argument(cmd, "device", message)
+            }
             DataManagerError::DeviceNotInitialized => SvpiResponse::err(
                 cmd,
                 "device_not_initialized",
@@ -61,6 +64,7 @@ impl SvpiResponse {
     pub fn data_manager_error_verbose(cmd: Option<String>, err: DataManagerError) -> Self {
         let (code, message) = match &err {
             DataManagerError::DeviceNotFound(_) => ("device_not_found", err.to_string()),
+            DataManagerError::InvalidArgument(_) => ("invalid_argument", err.to_string()),
             DataManagerError::DeviceNotInitialized => ("device_not_initialized", err.to_string()),
             DataManagerError::MismatchArchitectureVersion => {
                 ("architecture_mismatch", err.to_string())

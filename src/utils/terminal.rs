@@ -48,7 +48,7 @@ pub fn get_password_confirmed(title: Option<&str>) -> Option<String> {
             .trim()
             .to_string();
 
-        if confirm_password.is_empty() || password == confirm_password {
+        if password == confirm_password {
             return Some(password);
         }
 

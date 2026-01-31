@@ -46,7 +46,13 @@ async fn main() {
                 eprintln!("invalid_argument: subcommand is not supported in --mode=server");
                 std::process::exit(2);
             }
-            api::server::api_server(cli.interface_type(), cli.auto_exit)
+            api::server::api_server(
+                cli.interface_type(),
+                cli.auto_exit,
+                cli.bind,
+                cli.port,
+                cli.cors,
+            )
                 .launch()
                 .await
                 .expect("Failed to start API server!");

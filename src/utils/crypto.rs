@@ -1,4 +1,3 @@
-extern crate ring;
 use argon2::password_hash::rand_core::{OsRng, RngCore};
 use argon2::{Algorithm, Argon2, Params, Version};
 use chacha20poly1305::aead::{Aead, Payload};

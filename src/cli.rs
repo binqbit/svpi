@@ -49,6 +49,37 @@ pub struct CliArgs {
     )]
     pub auto_exit: bool,
 
+    #[arg(
+        long = "bind",
+        global = true,
+        require_equals = true,
+        default_value = "127.0.0.1",
+        value_name = "ADDR",
+        help = "Bind address for API server (server mode)"
+    )]
+    pub bind: std::net::IpAddr,
+
+    #[arg(
+        long = "port",
+        global = true,
+        require_equals = true,
+        default_value_t = 3333,
+        value_name = "PORT",
+        help = "Port for API server (server mode)"
+    )]
+    pub port: u16,
+
+    #[arg(
+        long = "cors",
+        global = true,
+        require_equals = true,
+        value_enum,
+        default_value_t = CorsPolicy::None,
+        value_name = "CORS",
+        help = "CORS policy for API server (server mode)"
+    )]
+    pub cors: CorsPolicy,
+
     #[command(subcommand)]
     pub command: Option<Command>,
 }
@@ -79,6 +110,14 @@ pub enum Mode {
     Server,
     /// Chrome Native Messaging app
     Chrome,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum CorsPolicy {
+    /// Do not send CORS headers (recommended)
+    None,
+    /// Allow all origins (dangerous)
+    AllowAll,
 }
 
 #[derive(Debug, Clone, Subcommand)]

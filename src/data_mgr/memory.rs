@@ -26,7 +26,7 @@ impl MemoryDataManager {
         let data = self.data.lock().expect("Failed to lock data");
 
         if address as usize + size > data.len() {
-            return Ok(Vec::with_capacity(size));
+            return Ok(vec![0; size]);
         }
 
         Ok(data[address as usize..address as usize + size].to_vec())

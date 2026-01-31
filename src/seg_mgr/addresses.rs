@@ -40,6 +40,7 @@ impl SegmentManager {
         let last_address = self
             .segments
             .iter()
+            .filter(|s| s.is_active())
             .map(|s| s.info.address + s.info.size as u32)
             .max();
         if let Some(last_segment) = last_address {

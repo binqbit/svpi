@@ -108,6 +108,14 @@ pub const HELP_FLAGS: &[(&str, &str)] = &[
         "Automatically exit the API server after device disconnection",
     ),
     (
+        "svpi --mode=server --bind=<ip> --port=<port>",
+        "Configure API server bind/port (default: 127.0.0.1:3333)",
+    ),
+    (
+        "svpi --mode=server --cors=<none|allow-all>",
+        "Configure API server CORS (default: none)",
+    ),
+    (
         "svpi <command> --file=<file_name>",
         "Open a file password storage",
     ),

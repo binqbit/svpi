@@ -13,12 +13,29 @@ pub struct FileSystemDataManager {
 
 impl FileSystemDataManager {
     pub fn open_file(path: &str) -> Result<Self, DeviceError> {
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(path)
-            .map_err(|_| DeviceError::DeviceNotFound)?;
+        let mut options = OpenOptions::new();
+        options.read(true).write(true).create(true);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+
+        let file = options.open(path).map_err(|_| DeviceError::DeviceNotFound)?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = file.metadata() {
+                let mode = meta.permissions().mode() & 0o777;
+                if mode & 0o077 != 0 {
+                    let mut perms = meta.permissions();
+                    perms.set_mode(0o600);
+                    let _ = file.set_permissions(perms);
+                }
+            }
+        }
         Ok(Self {
             file: Arc::new(Mutex::new(file)),
         })
@@ -37,7 +54,7 @@ impl FileSystemDataManager {
         let mut file = self.file.lock().expect("Failed to lock file");
 
         if file.metadata().map(|m| m.len()).unwrap_or(0) < address as u64 + size as u64 {
-            return Ok(Vec::with_capacity(size));
+            return Ok(vec![0; size]);
         }
 
         let mut buffer = vec![0; size];

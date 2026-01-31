@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use rocket::{config::Config, figment::Profile, Build, Rocket};
 use rocket_cors::CorsOptions;
 
+use crate::cli::CorsPolicy;
 use crate::data_mgr::{DataInterfaceType, DataManager};
 
 mod routes;
@@ -39,21 +40,34 @@ fn start_connection_checking(interface_type: DataInterfaceType, lock: Arc<Mutex<
     });
 }
 
-pub fn api_server(interface_type: DataInterfaceType, auto_exit: bool) -> Rocket<Build> {
-    println!("Starting SVPI Server on 0.0.0.0:3333");
+pub fn api_server(
+    interface_type: DataInterfaceType,
+    auto_exit: bool,
+    bind: std::net::IpAddr,
+    port: u16,
+    cors_policy: CorsPolicy,
+) -> Rocket<Build> {
+    println!("Starting SVPI Server on {bind}:{port}");
+    if matches!(cors_policy, CorsPolicy::AllowAll) {
+        if matches!(bind, std::net::IpAddr::V4(ip) if ip.is_unspecified())
+            || matches!(bind, std::net::IpAddr::V6(ip) if ip.is_unspecified())
+        {
+            eprintln!("warning: --cors=allow-all with an unspecified bind address exposes your vault over the network");
+        } else if bind.is_loopback() {
+            eprintln!("warning: --cors=allow-all allows any website to read this API from your browser");
+        } else {
+            eprintln!("warning: --cors=allow-all exposes your vault to cross-origin reads on this interface");
+        }
+    }
 
     let config = Config {
         profile: Profile::new("api"),
-        address: "0.0.0.0".parse().unwrap(),
-        port: 3333,
+        address: bind,
+        port,
         workers: 1,
         max_blocking: 1,
         ..Default::default()
     };
-
-    let cors = CorsOptions::default()
-        .to_cors()
-        .expect("Error creating CORS options");
 
     let lock = Arc::new(Mutex::new(()));
 
@@ -61,11 +75,19 @@ pub fn api_server(interface_type: DataInterfaceType, auto_exit: bool) -> Rocket<
         start_connection_checking(interface_type.clone(), lock.clone());
     }
 
-    rocket::custom(config)
-        .attach(cors)
+    let mut rocket = rocket::custom(config)
         .manage(ApiState {
             interface_type,
             lock,
         })
-        .mount("/", routes::route())
+        .mount("/", routes::route());
+
+    if matches!(cors_policy, CorsPolicy::AllowAll) {
+        let cors = CorsOptions::default()
+            .to_cors()
+            .expect("Error creating CORS options");
+        rocket = rocket.attach(cors);
+    }
+
+    rocket
 }

@@ -24,6 +24,8 @@ pub const SEGMENT_INFO_SIZE: usize = DataInfo::SIZE;
 pub enum DataManagerError {
     #[error("Device not found: {0}")]
     DeviceNotFound(DeviceError),
+    #[error("Invalid argument: {0}")]
+    InvalidArgument(String),
     #[error("Mismatch architecture version")]
     MismatchArchitectureVersion,
     #[error("Device not initialized")]
@@ -59,6 +61,15 @@ impl SegmentManager {
         memory_size: u32,
         dump_protection: EncryptionLevel,
     ) -> Result<(), DataManagerError> {
+        let min_memory_size: u32 =
+            (START_INIT_DATA.len() + METADATA_SIZE + END_INIT_DATA.len() + 4) as u32;
+        if memory_size < min_memory_size {
+            return Err(DataManagerError::InvalidArgument(format!(
+                "memory_size must be >= {min_memory_size}"
+            )));
+        }
+
+        self.segments.clear();
         self.metadata.memory_size = memory_size;
         self.metadata.dump_protection = dump_protection;
         self.init_metadata()
