@@ -1011,7 +1011,7 @@ fn execute_with_output(
                 .or_else(|| args.password.clone())
                 .filter(|p| !p.is_empty());
             if master_password.is_none() && output_mode == OutputFormat::Cli {
-                master_password = terminal::get_password_confirmed(Some("master password"))
+                master_password = terminal::get_password(Some("master password"))
                     .or_else(|| {
                         let mut clipboard = Clipboard::new().ok()?;
                         clipboard.get_text().ok().filter(|t| !t.trim().is_empty())
