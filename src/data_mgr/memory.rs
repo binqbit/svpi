@@ -26,7 +26,7 @@ impl MemoryDataManager {
         let data = self.data.lock().expect("Failed to lock data");
 
         if address as usize + size > data.len() {
-            return Ok(vec![0; size]);
+            return Err(DeviceError::ReadError);
         }
 
         Ok(data[address as usize..address as usize + size].to_vec())
@@ -57,7 +57,6 @@ mod tests {
         let read_data = memory_mgr.read_data(100, 5).unwrap();
         assert_eq!(read_data, write_data);
 
-        let empty_read = memory_mgr.read_data(2000, 5).unwrap();
-        assert!(empty_read.is_empty());
+        assert!(memory_mgr.read_data(2000, 5).is_err());
     }
 }

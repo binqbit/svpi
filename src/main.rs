@@ -2,6 +2,7 @@ use clap::{error::ErrorKind, Parser};
 
 use crate::{cli::Mode, utils::response::SvpiResponse};
 
+mod alloc;
 mod api;
 mod cli;
 mod data_mgr;
@@ -10,6 +11,9 @@ mod protocol;
 mod seg_mgr;
 mod svpi;
 mod utils;
+
+#[global_allocator]
+static GLOBAL_ALLOCATOR: alloc::ZeroingAllocator = alloc::ZeroingAllocator;
 
 #[tokio::main]
 async fn main() {

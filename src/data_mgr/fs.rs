@@ -56,7 +56,7 @@ impl FileSystemDataManager {
         let mut file = self.file.lock().expect("Failed to lock file");
 
         if file.metadata().map(|m| m.len()).unwrap_or(0) < address as u64 + size as u64 {
-            return Ok(vec![0; size]);
+            return Err(DeviceError::ReadError);
         }
 
         let mut buffer = vec![0; size];
