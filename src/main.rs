@@ -53,9 +53,9 @@ async fn main() {
                 cli.port,
                 cli.cors,
             )
-                .launch()
-                .await
-                .expect("Failed to start API server!");
+            .launch()
+            .await
+            .expect("Failed to start API server!");
         }
         Mode::Chrome => {
             if cli.command.is_some() {

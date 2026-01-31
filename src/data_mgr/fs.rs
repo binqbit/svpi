@@ -22,7 +22,9 @@ impl FileSystemDataManager {
             options.mode(0o600);
         }
 
-        let file = options.open(path).map_err(|_| DeviceError::DeviceNotFound)?;
+        let file = options
+            .open(path)
+            .map_err(|_| DeviceError::DeviceNotFound)?;
 
         #[cfg(unix)]
         {

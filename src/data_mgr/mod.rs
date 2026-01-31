@@ -28,6 +28,7 @@ pub enum DeviceError {
 pub enum DataInterfaceType {
     SerialPort,
     FileSystem(String),
+    #[allow(unused)]
     Memory(Vec<u8>),
 }
 

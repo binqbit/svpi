@@ -54,7 +54,9 @@ pub fn api_server(
         {
             eprintln!("warning: --cors=allow-all with an unspecified bind address exposes your vault over the network");
         } else if bind.is_loopback() {
-            eprintln!("warning: --cors=allow-all allows any website to read this API from your browser");
+            eprintln!(
+                "warning: --cors=allow-all allows any website to read this API from your browser"
+            );
         } else {
             eprintln!("warning: --cors=allow-all exposes your vault to cross-origin reads on this interface");
         }
