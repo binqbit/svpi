@@ -1210,7 +1210,7 @@ fn execute_with_output(
         cli::Command::Set(args) => {
             let name = args.name;
             let data = match args.data {
-                Some(data) => {
+                Some(data) if output_mode == OutputFormat::Cli => {
                     let path = Path::new(&data);
                     match fs::metadata(path) {
                         Ok(meta) => {
@@ -1270,6 +1270,7 @@ fn execute_with_output(
                         }
                     }
                 }
+                Some(data) => data,
                 None if output_mode == OutputFormat::Cli => {
                     let mut clipboard = match Clipboard::new() {
                         Ok(v) => v,
