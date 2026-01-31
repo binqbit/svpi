@@ -198,6 +198,7 @@ fn command_name(cmd: &cli::Command) -> &'static str {
         cli::Command::Help => "help",
         cli::Command::Version => "version",
         cli::Command::SelfHash => "self-hash",
+        cli::Command::Config => "config",
         cli::Command::SetFile { .. } => "set-file",
         cli::Command::Init { .. } => "init",
         cli::Command::Check => "check",
@@ -322,6 +323,59 @@ fn execute_with_output(
                         "app_hash": app_hash,
                         "config_file": CONFIG_FILE_NAME,
                         "config_hash": config_hash,
+                    }),
+                ),
+                0,
+            )
+        }
+        cli::Command::Config => {
+            let config_path = match crate::config::SvpiConfig::path_in_cwd() {
+                Ok(v) => v,
+                Err(err) => {
+                    return SvpiResponse::err(
+                        cmd_out.clone(),
+                        "internal_error",
+                        format!("Failed to resolve config path: {err}"),
+                        None,
+                    )
+                    .with_exit_code();
+                }
+            };
+
+            let exists = config_path.exists();
+            let cfg = if exists {
+                crate::config::SvpiConfig::load_from_path(&config_path)
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+
+            let valid = exists && cfg.is_some();
+
+            let (mode_code, mode_name, file) = if let Some(cfg) = cfg {
+                let mode_name = match cfg.mode {
+                    0 => "cli",
+                    1 => "json",
+                    2 => "server",
+                    3 => "chrome",
+                    _ => "unknown",
+                };
+                (Some(cfg.mode), Some(mode_name), cfg.file)
+            } else {
+                (None, None, None)
+            };
+
+            (
+                SvpiResponse::ok(
+                    cmd_out,
+                    json!({
+                        "config_file": CONFIG_FILE_NAME,
+                        "exists": exists,
+                        "valid": valid,
+                        "mode": mode_code,
+                        "mode_name": mode_name,
+                        "file": file,
                     }),
                 ),
                 0,

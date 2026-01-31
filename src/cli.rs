@@ -142,6 +142,9 @@ pub enum Command {
     )]
     SelfHash,
 
+    #[command(name = "config", alias = "cfg", about = "Print .svpi config settings")]
+    Config,
+
     #[command(
         name = "set-file",
         alias = "sf",

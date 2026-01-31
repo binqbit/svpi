@@ -219,6 +219,43 @@ impl SvpiResponse {
                     println!("{:15}{}", format!("config({cfg}):"), "(not found)");
                 }
             }
+            "config" => {
+                let cfg = result
+                    .get("config_file")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".svpi");
+                let exists = result
+                    .get("exists")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let valid = result
+                    .get("valid")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+
+                if !exists {
+                    println!("config({cfg}): (not found)");
+                    return;
+                }
+                if !valid {
+                    println!("config({cfg}): (invalid)");
+                    return;
+                }
+
+                let mode = result
+                    .get("mode_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                let file = result.get("file").and_then(|v| v.as_str());
+
+                println!("config({cfg}):");
+                println!("mode: {mode}");
+                if let Some(v) = file {
+                    println!("file: {v}");
+                } else {
+                    println!("file: (not set)");
+                }
+            }
             "init" => {
                 let memory_size = result
                     .get("memory_size")
