@@ -201,6 +201,24 @@ impl SvpiResponse {
                 }
             }
             "version" => self.print_info_cli(),
+            "self-hash" => {
+                let app_hash = result
+                    .get("app_hash")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("-");
+                let cfg = result
+                    .get("config_file")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".svpi");
+                let cfg_hash = result.get("config_hash").and_then(|v| v.as_str());
+
+                println!("app: {app_hash}");
+                if let Some(h) = cfg_hash {
+                    println!("config({cfg}): {h}");
+                } else {
+                    println!("config({cfg}): (not found)");
+                }
+            }
             "init" => {
                 let memory_size = result
                     .get("memory_size")

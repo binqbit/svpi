@@ -271,7 +271,7 @@ fn execute_with_output(
                 }
             };
 
-            let hash = match sha256_file_hex(&exe_path) {
+            let app_hash = match sha256_file_hex(&exe_path) {
                 Ok(v) => v,
                 Err(err) => {
                     return SvpiResponse::err(
@@ -284,8 +284,46 @@ fn execute_with_output(
                 }
             };
 
+            let config_path = match crate::config::SvpiConfig::path_in_cwd() {
+                Ok(v) => v,
+                Err(err) => {
+                    return SvpiResponse::err(
+                        cmd_out.clone(),
+                        "internal_error",
+                        format!("Failed to resolve config path: {err}"),
+                        None,
+                    )
+                    .with_exit_code();
+                }
+            };
+
+            let config_hash = if config_path.exists() {
+                match sha256_file_hex(&config_path) {
+                    Ok(v) => Some(v),
+                    Err(err) => {
+                        return SvpiResponse::err(
+                            cmd_out.clone(),
+                            "internal_error",
+                            format!("Failed to hash config file: {err}"),
+                            Some(json!({ "path": config_path.to_string_lossy() })),
+                        )
+                        .with_exit_code();
+                    }
+                }
+            } else {
+                None
+            };
+
             (
-                SvpiResponse::ok(cmd_out, json!({ "data": hash, "algo": "sha256" })),
+                SvpiResponse::ok(
+                    cmd_out,
+                    json!({
+                        "algo": "sha256",
+                        "app_hash": app_hash,
+                        "config_file": CONFIG_FILE_NAME,
+                        "config_hash": config_hash,
+                    }),
+                ),
                 0,
             )
         }
