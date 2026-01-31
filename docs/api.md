@@ -1,11 +1,12 @@
-# API Documentation (Server + Chrome)
+# API Documentation (Terminal + Server + Chrome)
 
-SVPI exposes a small JSON API over two transports:
+SVPI exposes a small JSON API over three transports:
 
+- **Terminal (JSON output)**: `svpi --mode=json` (stdout JSON, non-interactive)
 - **Server API (HTTP)**: `svpi --mode=server` (Rocket on `0.0.0.0:3333`)
 - **Chrome Native Messaging**: `svpi --mode=chrome` (stdin/stdout length-prefixed messages)
 
-Both transports share the same response envelope.
+All transports share the same response envelope.
 
 ## Response envelope
 
@@ -20,7 +21,7 @@ All responses are `SvpiResponse` with `schema: "svpi.response.v1"`.
   "command": "api.status",
   "result": { "status": "ok", "architecture_version": 8 },
   "meta": {
-    "app_version": "6.0.0",
+    "app_version": "<semver>",
     "architecture_version": 8
   }
 }
@@ -39,7 +40,7 @@ All responses are `SvpiResponse` with `schema: "svpi.response.v1"`.
     "details": { "name": "my-secret" }
   },
   "meta": {
-    "app_version": "6.0.0",
+    "app_version": "<semver>",
     "architecture_version": 8
   }
 }
@@ -49,7 +50,10 @@ Notes:
 
 - `meta.app_version` / `meta.architecture_version` come from the running SVPI binary.
 - `result.architecture_version` (in `/status`) is the architecture version found on the device.
-- `command` uses `api.*` for HTTP and `chrome.*` for Native Messaging.
+- `command` uses:
+  - plain command names in terminal JSON mode (e.g. `list`, `get`)
+  - `api.*` for HTTP
+  - `chrome.*` for Native Messaging
 
 ## 1) Device status
 

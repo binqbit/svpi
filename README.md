@@ -10,7 +10,8 @@ SVPI is designed to be usable both by humans and by other software:
 - interactive CLI for day-to-day usage
 - JSON API for integrations (HTTP server or Chrome Native Messaging)
 
-Storage backends can be a file, a serial-connected device (via SRWP), or an in-memory buffer.
+Storage backend can be a file-based vault or a serial-connected device (USB serial / COM port, via
+SRWP).
 
 ## Documentation
 

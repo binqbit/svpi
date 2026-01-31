@@ -1,7 +1,8 @@
 # Storage Architecture
 
-SVPI stores everything inside a single contiguous memory region (a Blaustahl device region, a file,
-or an in-memory buffer). That region is treated as a byte array of size `memory_size`.
+SVPI stores everything inside a single contiguous storage region (a file-backed vault, or a
+serial-connected device exposed as a USB serial / COM port). That region is treated as a byte array
+of size `memory_size`.
 
 This document describes the **binary layout**, **segment format**, and **encoding rules**.
 
@@ -31,7 +32,7 @@ memory_size
 
 The metadata is a fixed-size borsh-encoded struct:
 
-- `version: u32` — storage architecture version (currently `8`)
+- `version: u32` — storage architecture version
 - `memory_size: u32` — total storage size in bytes
 - `dump_protection: u8` — global cryptographic protection level (see [security.md](security.md))
 - `master_password_hash: [u8; 32]` — master password check-hash (not the password itself)

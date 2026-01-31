@@ -1,6 +1,7 @@
 # Security Model
 
-This document explains SVPI’s security model **by logic**, not by CLI commands.
+This document describes how security works in SVPI: the key hierarchy, cryptographic primitives,
+protection levels, and operational recommendations.
 
 ## Key hierarchy (two-layer model)
 
@@ -64,7 +65,7 @@ SVPI uses a shared enum of levels:
 
 These levels primarily affect Argon2id parameters (time/parallelism/memory).
 
-Default parameters (non-test builds):
+Default parameters:
 
 | Level    | Argon2id m_cost (KiB) | t_cost | p_cost | Intended use                    |
 | -------- | --------------------: | -----: | -----: | ------------------------------- |
