@@ -54,6 +54,18 @@ Conceptually, it is a **selector** that helps SVPI decide which key is expected 
 - **Encrypted blob format** (for data and encrypted key material):
   - `salt(16) | nonce(24) | ciphertext(...)`
 
+## Memory hygiene (heap)
+
+SVPI uses a custom global allocator that **zeroes heap allocations on free** (and wipes old
+buffers during reallocation). This reduces the risk of secrets lingering in process heap memory
+after they are no longer needed (e.g., `String`/`Vec<u8>` buffers for passwords/keys).
+
+Limitations:
+
+- This covers **heap** allocations only; it does not guarantee wiping **stack** copies or CPU
+  registers.
+- The OS can still page memory to disk, create core dumps, etc., depending on system settings.
+
 ## Protection levels
 
 SVPI uses a shared enum of levels:
