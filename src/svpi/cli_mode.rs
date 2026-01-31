@@ -8,8 +8,9 @@ use crate::{
     data_mgr::DataInterfaceType,
     pass_mgr::PasswordManager,
     protocol::segments::SegmentSummary,
-    seg_mgr::{Data, DataType, FormattedData},
+    seg_mgr::{Data, DataType, EncryptionLevel, FormattedData},
     utils::{
+        dump,
         response::{OutputFormat, SvpiResponse},
         terminal,
     },
@@ -413,7 +414,11 @@ fn execute_with_output(
             )
         }
 
-        cli::Command::Dump { file_name } => {
+        cli::Command::Dump {
+            file_name,
+            protection,
+            password,
+        } => {
             let file_path = file_name;
 
             let mut pass_mgr = match load_mgr(interface_type, cmd_out.clone()) {
@@ -421,28 +426,59 @@ fn execute_with_output(
                 Err(err) => return err,
             };
 
-            let dump = match pass_mgr.get_data_manager().get_dump() {
+            let mut dump = match pass_mgr.get_data_manager().get_dump() {
                 Ok(v) => v,
                 Err(err) => {
                     return SvpiResponse::err(cmd_out, "device_error", err.to_string(), None)
                         .with_exit_code();
                 }
             };
+
+            let mut dump_password = password.filter(|p| !p.is_empty());
+            if dump_password.is_none() && output_mode == OutputFormat::Cli {
+                dump_password = terminal::get_password_confirmed(Some("dump password"));
+            }
+
+            let mut encrypted = false;
+            let mut dump_protection = dump::DUMP_PROTECTION_NONE;
+            if let Some(dump_password) = dump_password {
+                let protection: EncryptionLevel = protection.into();
+                dump = match dump::encrypt_dump(&dump, &dump_password, protection) {
+                    Ok(v) => v,
+                    Err(err) => {
+                        return SvpiResponse::err(
+                            cmd_out,
+                            "encryption_error",
+                            err.to_string(),
+                            None,
+                        )
+                        .with_exit_code();
+                    }
+                };
+                encrypted = true;
+                dump_protection = dump::protection_code(protection);
+            }
+
             if let Err(err) = fs::write(&file_path, &dump) {
                 return SvpiResponse::err(cmd_out, "io_error", err.to_string(), None)
                     .with_exit_code();
             }
 
-            (
-                SvpiResponse::ok(
-                    cmd_out,
-                    json!({ "dump_saved": true, "file": file_path, "bytes": dump.len() }),
-                ),
-                0,
-            )
+            let result = json!({
+                "dump_saved": true,
+                "file": file_path,
+                "bytes": dump.len(),
+                "encrypted": encrypted,
+                "dump_protection": dump_protection,
+            });
+
+            (SvpiResponse::ok(cmd_out, result), 0)
         }
 
-        cli::Command::Load { file_name } => {
+        cli::Command::Load {
+            file_name,
+            password,
+        } => {
             let file_path = file_name;
 
             let mut pass_mgr = match open_mgr_for_uninitialized(interface_type, cmd_out.clone()) {
@@ -479,23 +515,92 @@ fn execute_with_output(
                 }
             };
 
+            let file_bytes = dump.len();
+
+            let mut encrypted = false;
+            let mut dump_protection = dump::DUMP_PROTECTION_NONE;
+            let dump = match dump::dump_protection(&dump) {
+                Ok(Some(level)) => {
+                    encrypted = true;
+                    dump_protection = level;
+
+                    let mut dump_password = password.filter(|p| !p.is_empty());
+                    if dump_password.is_none() && output_mode == OutputFormat::Cli {
+                        dump_password = terminal::get_password(Some("dump password"));
+                        if dump_password.is_none() {
+                            return SvpiResponse::cancelled(
+                                cmd_out,
+                                "load_dump",
+                                json!({ "file": file_path.as_str() }),
+                            )
+                            .with_exit_code();
+                        }
+                    }
+
+                    let Some(dump_password) = dump_password else {
+                        let mut details = json!({ "file": file_path.as_str() });
+                        details["dump_protection"] = json!(dump_protection);
+                        return SvpiResponse::err(
+                            cmd_out,
+                            "password_required",
+                            "Password required for dump decryption (pass --password=...)",
+                            Some(details),
+                        )
+                        .with_exit_code();
+                    };
+
+                    match dump::decrypt_dump(&dump, &dump_password) {
+                        Ok((plain, level)) => {
+                            dump_protection = level;
+                            plain
+                        }
+                        Err(err) if matches!(err, crate::seg_mgr::DataError::DecryptionError) => {
+                            return SvpiResponse::err(
+                                cmd_out,
+                                "password_error",
+                                "Invalid dump password",
+                                Some(json!({ "file": file_path.as_str() })),
+                            )
+                            .with_exit_code();
+                        }
+                        Err(_) => {
+                            return SvpiResponse::err(
+                                cmd_out,
+                                "invalid_argument",
+                                "Invalid encrypted dump format",
+                                Some(json!({ "file": file_path.as_str() })),
+                            )
+                            .with_exit_code();
+                        }
+                    }
+                }
+                Ok(None) => dump,
+                Err(_) => {
+                    return SvpiResponse::err(
+                        cmd_out,
+                        "invalid_argument",
+                        "Invalid encrypted dump format",
+                        Some(json!({ "file": file_path.as_str() })),
+                    )
+                    .with_exit_code();
+                }
+            };
+
             if let Err(err) = pass_mgr.get_data_manager().set_dump(&dump) {
                 return SvpiResponse::err(cmd_out, "device_error", err.to_string(), None)
                     .with_exit_code();
             }
 
-            (
-                SvpiResponse::ok(
-                    cmd_out,
-                    json!({
-                        "dump_loaded": true,
-                        "file": file_path,
-                        "bytes": dump.len(),
-                        "already_initialized": already_initialized,
-                    }),
-                ),
-                0,
-            )
+            let result = json!({
+                "dump_loaded": true,
+                "file": file_path,
+                "bytes": file_bytes,
+                "already_initialized": already_initialized,
+                "encrypted": encrypted,
+                "dump_protection": dump_protection,
+            });
+
+            (SvpiResponse::ok(cmd_out, result), 0)
         }
 
         cli::Command::SetMasterPassword(args) => {

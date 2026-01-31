@@ -11,6 +11,17 @@ pub enum OutputFormat {
 
 pub const RESPONSE_SCHEMA_V1: &str = "svpi.response.v1";
 
+fn dump_protection_label(code: u64) -> &'static str {
+    match code {
+        0 => "none",
+        1 => "low",
+        2 => "medium",
+        3 => "strong",
+        4 => "hardened",
+        _ => "unknown",
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct SvpiMeta {
     pub app_version: &'static str,
@@ -256,7 +267,22 @@ impl SvpiResponse {
             "dump" => {
                 let file = result.get("file").and_then(|v| v.as_str()).unwrap_or("-");
                 let bytes = result.get("bytes").and_then(|v| v.as_u64()).unwrap_or(0);
-                println!("Dump saved to '{file}' ({bytes} bytes).");
+                let encrypted = result
+                    .get("encrypted")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let protection = result
+                    .get("dump_protection")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let protection_label = dump_protection_label(protection);
+                if encrypted {
+                    println!(
+                        "Dump saved to '{file}' ({bytes} bytes, encrypted: {protection_label})."
+                    );
+                } else {
+                    println!("Dump saved to '{file}' ({bytes} bytes).");
+                }
             }
             "load" => {
                 let file = result.get("file").and_then(|v| v.as_str()).unwrap_or("-");
@@ -265,13 +291,34 @@ impl SvpiResponse {
                     .get("already_initialized")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
+                let encrypted = result
+                    .get("encrypted")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let protection = result
+                    .get("dump_protection")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let protection_label = dump_protection_label(protection);
 
                 if already_initialized {
-                    println!(
-                        "Dump loaded from '{file}' ({bytes} bytes), existing data overwritten."
-                    );
+                    if encrypted {
+                        println!(
+                            "Dump loaded from '{file}' ({bytes} bytes, encrypted: {protection_label}), existing data overwritten."
+                        );
+                    } else {
+                        println!(
+                            "Dump loaded from '{file}' ({bytes} bytes), existing data overwritten."
+                        );
+                    }
                 } else {
-                    println!("Dump loaded from '{file}' ({bytes} bytes).");
+                    if encrypted {
+                        println!(
+                            "Dump loaded from '{file}' ({bytes} bytes, encrypted: {protection_label})."
+                        );
+                    } else {
+                        println!("Dump loaded from '{file}' ({bytes} bytes).");
+                    }
                 }
             }
             "set-master-password" => println!("Master password set."),

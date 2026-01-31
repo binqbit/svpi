@@ -2,7 +2,7 @@ pub mod cli_mode;
 
 pub const HELP_COMMANDS: &[(&str, &str)] = &[
     (
-        "svpi init / i <memory_size> [low|medium|strong]",
+        "svpi init / i <memory_size> [low|medium|strong|hardened]",
         "Initialize the device for the desired architecture",
     ),
     ("svpi check / c", "Check the status of the device"),
@@ -11,12 +11,12 @@ pub const HELP_COMMANDS: &[(&str, &str)] = &[
     ("svpi export / e <file_name>", "Export data to a file"),
     ("svpi import / m <file_name>", "Import data from a file"),
     (
-        "svpi dump / d <file_name>",
-        "Dump the data from the device to a file",
+        "svpi dump / d <file_name> [low|medium|strong|hardened]",
+        "Dump the data from the device to a file (optionally encrypted)",
     ),
     (
         "svpi load / ld <file_name>",
-        "Load dump data from a file to the device",
+        "Load dump data from a file to the device (prompts for password if encrypted)",
     ),
     (
         "svpi set-master-password / set-master",
@@ -78,6 +78,14 @@ pub const HELP_FLAGS: &[(&str, &str)] = &[
     (
         "svpi set <name> <value> --password=<password>",
         "Provide password via command line",
+    ),
+    (
+        "svpi dump <file_name> [low|medium|strong|hardened] --password=<password>",
+        "Encrypt dump with a password",
+    ),
+    (
+        "svpi load <file_name> --password=<password>",
+        "Provide password for encrypted dump",
     ),
     (
         "svpi change-password <name> --old-password=<old_password> --new-password=<new_password>",

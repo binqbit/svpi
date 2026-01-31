@@ -98,7 +98,7 @@ pub enum Command {
             value_enum,
             default_value_t = EncryptionLevelArg::Medium,
             value_name = "PROTECTION",
-            help = "Dump protection level: low=1, medium=2, strong=4"
+            help = "Dump protection level: low, medium, strong, hardened"
         )]
         protection: EncryptionLevelArg,
     },
@@ -124,20 +124,48 @@ pub enum Command {
         file_name: String,
     },
 
-    #[command(name = "dump", alias = "d", about = "Dump raw device memory to a file")]
+    #[command(
+        name = "dump",
+        alias = "d",
+        about = "Dump raw device memory to a file (optionally encrypted)"
+    )]
     Dump {
         #[arg(value_name = "FILE", help = "Output file path")]
         file_name: String,
+
+        #[arg(
+            value_enum,
+            default_value_t = EncryptionLevelArg::Medium,
+            value_name = "PROTECTION",
+            help = "Dump encryption level: low=1, medium=2, strong=3, hardened=4"
+        )]
+        protection: EncryptionLevelArg,
+
+        #[arg(
+            long = "password",
+            require_equals = true,
+            value_name = "PASSWORD",
+            help = "Password to encrypt the dump (optional in CLI; required in --mode=json to encrypt)"
+        )]
+        password: Option<String>,
     },
 
     #[command(
         name = "load",
         alias = "ld",
-        about = "Load raw device dump from a file"
+        about = "Load raw device dump from a file (prompts for password if encrypted)"
     )]
     Load {
         #[arg(value_name = "FILE", help = "Input file path")]
         file_name: String,
+
+        #[arg(
+            long = "password",
+            require_equals = true,
+            value_name = "PASSWORD",
+            help = "Password to decrypt the dump (required in --mode=json if dump is encrypted)"
+        )]
+        password: Option<String>,
     },
 
     #[command(
@@ -227,6 +255,8 @@ pub enum EncryptionLevelArg {
     Medium,
     /// Slower, stronger
     Strong,
+    /// Slowest, strongest
+    Hardened,
 }
 
 impl EncryptionLevelArg {
@@ -235,6 +265,7 @@ impl EncryptionLevelArg {
             EncryptionLevelArg::Low => "low",
             EncryptionLevelArg::Medium => "medium",
             EncryptionLevelArg::Strong => "strong",
+            EncryptionLevelArg::Hardened => "hardened",
         }
     }
 
@@ -243,6 +274,7 @@ impl EncryptionLevelArg {
             EncryptionLevelArg::Low => 1,
             EncryptionLevelArg::Medium => 2,
             EncryptionLevelArg::Strong => 4,
+            EncryptionLevelArg::Hardened => 4,
         }
     }
 }
@@ -253,6 +285,7 @@ impl From<EncryptionLevelArg> for EncryptionLevel {
             EncryptionLevelArg::Low => EncryptionLevel::Low,
             EncryptionLevelArg::Medium => EncryptionLevel::Medium,
             EncryptionLevelArg::Strong => EncryptionLevel::Strong,
+            EncryptionLevelArg::Hardened => EncryptionLevel::Hardened,
         }
     }
 }
