@@ -9,6 +9,8 @@ mod data;
 mod encryption;
 mod password;
 
+pub use encryption::EncryptionKeySource;
+
 #[derive(Debug, Error)]
 pub enum PasswordManagerError {
     #[error("Encryption error: {0}")]

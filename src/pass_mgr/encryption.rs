@@ -3,7 +3,55 @@ use crate::{
     seg_mgr::{DataType, EncryptionKey, Segment, DATA_FINGERPRINT_SIZE},
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EncryptionKeySource {
+    StoredKey,
+    DefaultKey,
+}
+
 impl PasswordManager {
+    pub fn resolve_encryption_key_source(
+        &mut self,
+        password: &str,
+        fingerprint: Option<[u8; DATA_FINGERPRINT_SIZE]>,
+    ) -> Result<EncryptionKeySource, PasswordManagerError> {
+        let dump_protection = self.0.metadata.dump_protection;
+        if let Some(fp) = fingerprint {
+            let encryption_key_segment = self
+                .get_encryption_keys()
+                .into_iter()
+                .find(|seg| seg.info.fingerprint.fingerprint == fp);
+
+            if let Some(encryption_key_segment) = encryption_key_segment {
+                let data = encryption_key_segment
+                    .read_data()
+                    .map_err(PasswordManagerError::GetEncryptionKey)?
+                    .to_bytes()
+                    .map_err(PasswordManagerError::InvalidEncryptionKey)?;
+                let mut key = EncryptionKey::unpack(&data)
+                    .map_err(PasswordManagerError::InvalidEncryptionKey)?;
+                if key.decrypt(password, dump_protection).is_ok() {
+                    return Ok(EncryptionKeySource::StoredKey);
+                }
+            }
+        }
+
+        for seg in self.get_encryption_keys() {
+            let data = seg
+                .read_data()
+                .map_err(PasswordManagerError::GetEncryptionKey)?
+                .to_bytes()
+                .map_err(PasswordManagerError::InvalidEncryptionKey)?;
+            let mut key =
+                EncryptionKey::unpack(&data).map_err(PasswordManagerError::InvalidEncryptionKey)?;
+            if key.decrypt(password, dump_protection).is_ok() {
+                return Ok(EncryptionKeySource::StoredKey);
+            }
+        }
+
+        Ok(EncryptionKeySource::DefaultKey)
+    }
+
     pub fn get_encryption_keys(&mut self) -> Vec<&mut Segment> {
         self.0
             .get_active_segments_mut()

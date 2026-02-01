@@ -13,9 +13,9 @@ use crate::{
     cli,
     config::CONFIG_FILE_NAME,
     data_mgr::DataInterfaceType,
-    pass_mgr::PasswordManager,
+    pass_mgr::{EncryptionKeySource, PasswordManager},
     protocol::segments::SegmentSummary,
-    seg_mgr::{Data, DataType, EncryptionLevel, FormattedData},
+    seg_mgr::{Data, DataType, EncryptionLevel, FormattedData, DATA_FINGERPRINT_SIZE},
     utils::{
         dump,
         response::{OutputFormat, SvpiResponse},
@@ -69,6 +69,33 @@ fn confirm_or_require_confirm(
             Err(SvpiResponse::confirmation_required(cmd_out, action, details).with_exit_code())
         }
     }
+}
+
+fn confirm_default_key_usage(
+    pass_mgr: &mut PasswordManager,
+    password: &str,
+    fingerprint: Option<[u8; DATA_FINGERPRINT_SIZE]>,
+    confirm: bool,
+    output_mode: OutputFormat,
+    cmd_out: Option<String>,
+    prompt: &str,
+    action: &str,
+    details: Value,
+) -> Result<(), (SvpiResponse, i32)> {
+    if output_mode != OutputFormat::Cli {
+        return Ok(());
+    }
+
+    let source = match pass_mgr.resolve_encryption_key_source(password, fingerprint) {
+        Ok(v) => v,
+        Err(err) => return Err(SvpiResponse::password_manager_error(cmd_out, err).with_exit_code()),
+    };
+
+    if source == EncryptionKeySource::StoredKey {
+        return Ok(());
+    }
+
+    confirm_or_require_confirm(confirm, output_mode, cmd_out, prompt, action, details)
 }
 
 fn sha256_file_hex(path: &Path) -> std::io::Result<String> {
@@ -1330,6 +1357,22 @@ fn execute_with_output(
                 Ok(mgr) => mgr,
                 Err(err) => return err,
             };
+
+            if let Some(ref password) = encryption_key {
+                if let Err(err) = confirm_default_key_usage(
+                    &mut pass_mgr,
+                    password,
+                    None,
+                    confirm,
+                    output_mode,
+                    cmd_out.clone(),
+                    "Encryption key not found. Use provided password as default key?",
+                    "default_key_fallback",
+                    json!({ "name": name }),
+                ) {
+                    return err;
+                }
+            }
 
             let saved = match pass_mgr.save_password(&name, &data, encryption_key.clone()) {
                 Ok(v) => v,
