@@ -218,21 +218,24 @@ pub fn run_with_cli(cli: &cli::CliArgs) -> i32 {
 
     let command = cli.command.clone().unwrap_or(cli::Command::Help);
     if output_mode == OutputFormat::Cli {
-        if matches!(command, cli::Command::Set(_) | cli::Command::Get(_)) {
+        if matches!(command, cli::Command::Set(_)) {
             let cmd_out = Some(command_name(&command).to_string());
             let resp = SvpiResponse::err(
                 cmd_out,
                 "invalid_argument",
-                "Use interactive mode for set/get (run `svpi` without a subcommand)",
+                "Use interactive mode for `set` command (run `svpi` without a subcommand)",
                 None,
             );
             resp.print(output_mode);
             return 2;
         }
     }
+    let is_sensitive = matches!(command, cli::Command::Get(_));
     let (resp, code) = execute_with_output(command, output_mode, &interface_type, confirm);
-
     resp.print(output_mode);
+    if is_sensitive {
+        terminal::wait_enter_and_clear();
+    }
 
     code
 }
