@@ -163,8 +163,12 @@ fn run_repl(cli: &cli::CliArgs) -> i32 {
             }
             _ => None,
         };
+        let is_sensitive = matches!(cmd, cli::Command::Set(_) | cli::Command::Get(_));
         let (resp, _code) = execute_with_output(cmd, OutputFormat::Cli, &interface_type, confirm);
         resp.print(OutputFormat::Cli);
+        if is_sensitive {
+            terminal::wait_enter_and_clear();
+        }
 
         if resp.ok {
             if let Some(v) = update_default_interface {
@@ -1024,11 +1028,10 @@ fn execute_with_output(
                 .or_else(|| args.password.clone())
                 .filter(|p| !p.is_empty());
             if master_password.is_none() && output_mode == OutputFormat::Cli {
-                master_password = terminal::get_password(Some("master password"))
-                    .or_else(|| {
-                        let mut clipboard = Clipboard::new().ok()?;
-                        clipboard.get_text().ok().filter(|t| !t.trim().is_empty())
-                    });
+                master_password = terminal::get_password(Some("master password")).or_else(|| {
+                    let mut clipboard = Clipboard::new().ok()?;
+                    clipboard.get_text().ok().filter(|t| !t.trim().is_empty())
+                });
             }
             let Some(master_password) = master_password else {
                 if output_mode == OutputFormat::Cli {

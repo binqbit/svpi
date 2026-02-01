@@ -111,3 +111,17 @@ pub fn get_password_confirmed(title: Option<&str>) -> Option<String> {
         println!("Please try again.");
     }
 }
+
+pub fn wait_enter_and_clear() {
+    print!("Press Enter to continue...");
+    let _ = std::io::stdout().flush();
+
+    let mut line = String::new();
+    let _ = std::io::stdin().read_line(&mut line);
+
+    if std::io::stdout().is_terminal() {
+        print!("\x1B[3J\x1B[2J");
+        print!("\x1B[3J\x1B[H");
+        let _ = std::io::stdout().flush();
+    }
+}
