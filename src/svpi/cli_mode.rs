@@ -233,7 +233,7 @@ pub fn run_with_cli(cli: &cli::CliArgs) -> i32 {
     let is_sensitive = matches!(command, cli::Command::Get(_));
     let (resp, code) = execute_with_output(command, output_mode, &interface_type, confirm);
     resp.print(output_mode);
-    if is_sensitive {
+    if is_sensitive && output_mode == OutputFormat::Cli {
         terminal::wait_enter_and_clear();
     }
 
