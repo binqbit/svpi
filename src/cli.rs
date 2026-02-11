@@ -178,6 +178,19 @@ pub enum Command {
     #[command(name = "optimize", alias = "o", about = "Optimize memory usage")]
     Optimize,
 
+    #[command(
+        name = "resize",
+        alias = "rs",
+        about = "Resize vault storage (omit size to pack to minimum)"
+    )]
+    Resize {
+        #[arg(
+            value_name = "MEMORY_SIZE",
+            help = "New vault size in bytes (omit to pack to minimum possible size)"
+        )]
+        memory_size: Option<u32>,
+    },
+
     #[command(name = "export", alias = "e", about = "Export data to a file")]
     Export {
         #[arg(value_name = "FILE", help = "Output file path")]

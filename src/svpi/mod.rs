@@ -14,6 +14,10 @@ pub const HELP_COMMANDS: &[(&str, &str)] = &[
     ("svpi check / c", "Check the status of the device"),
     ("svpi format / f", "Format the data in the device"),
     ("svpi optimize / o", "Optimize the memory"),
+    (
+        "svpi resize / rs [memory_size]",
+        "Resize the vault (omit size to pack to minimum)",
+    ),
     ("svpi export / e <file_name>", "Export data to a file"),
     ("svpi import / m <file_name>", "Import data from a file"),
     (

@@ -306,6 +306,32 @@ impl SvpiResponse {
                     .unwrap_or(0);
                 println!("Optimized {optimized} bytes. Free: {free}/{total} bytes.");
             }
+            "resize" => {
+                let old = result
+                    .get("memory_old")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let new = result
+                    .get("memory_new")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let free = result
+                    .get("memory_free")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let optimized = result
+                    .get("optimized_bytes")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+
+                if old == new {
+                    println!("Repacked. Free: {free}/{new} bytes. Optimized: {optimized} bytes.");
+                } else {
+                    println!(
+                        "Resized {old} -> {new} bytes. Free: {free}/{new} bytes. Optimized: {optimized} bytes."
+                    );
+                }
+            }
             "export" => {
                 let file = result.get("file").and_then(|v| v.as_str()).unwrap_or("-");
                 let segments = result.get("segments").and_then(|v| v.as_u64()).unwrap_or(0);

@@ -251,6 +251,7 @@ fn command_name(cmd: &cli::Command) -> &'static str {
         cli::Command::Check => "check",
         cli::Command::Format => "format",
         cli::Command::Optimize => "optimize",
+        cli::Command::Resize { .. } => "resize",
         cli::Command::Export { .. } => "export",
         cli::Command::Import { .. } => "import",
         cli::Command::Dump { .. } => "dump",
@@ -596,6 +597,54 @@ fn execute_with_output(
                         "memory_total": seg_mgr.metadata.memory_size,
                         "memory_free": seg_mgr.free_memory_size(),
                         "optimized_bytes": optimized,
+                    }),
+                ),
+                0,
+            )
+        }
+
+        cli::Command::Resize { memory_size } => {
+            let mut pass_mgr = match load_mgr(interface_type, cmd_out.clone()) {
+                Ok(mgr) => mgr,
+                Err(err) => return err,
+            };
+
+            let seg_mgr = pass_mgr.get_data_manager();
+            let old_memory_size = seg_mgr.metadata.memory_size;
+
+            if let Err(err) = confirm_or_require_confirm(
+                confirm,
+                output_mode,
+                cmd_out.clone(),
+                "Resizing will rewrite the vault metadata table and may truncate/wipe freed space. Continue?",
+                "resize",
+                json!({
+                    "memory_size_current": old_memory_size,
+                    "memory_size_target": memory_size,
+                    "pack_to_minimum": memory_size.is_none(),
+                }),
+            ) {
+                return err;
+            }
+
+            let optimized_bytes = match seg_mgr.resize_memory(memory_size) {
+                Ok(v) => v,
+                Err(err) => {
+                    return SvpiResponse::data_manager_error_verbose(cmd_out, err).with_exit_code();
+                }
+            };
+
+            (
+                SvpiResponse::ok(
+                    cmd_out,
+                    json!({
+                        "resized": true,
+                        "pack_to_minimum": memory_size.is_none(),
+                        "memory_old": old_memory_size,
+                        "memory_new": seg_mgr.metadata.memory_size,
+                        "memory_total": seg_mgr.metadata.memory_size,
+                        "memory_free": seg_mgr.free_memory_size(),
+                        "optimized_bytes": optimized_bytes,
                     }),
                 ),
                 0,
