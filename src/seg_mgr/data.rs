@@ -380,21 +380,31 @@ impl FormattedData {
     pub fn decode(data: &str) -> Result<Self, DataError> {
         let (name, data) = data.split_once("=").ok_or(DataError::InvalidData)?;
         let name = name.trim().to_string();
-        let parts = data.split(";").collect::<Vec<&str>>();
 
-        let (password_fingerprint, data_type, data) = if parts.len() == 1 {
-            (None, None, parts[0].trim().to_string())
-        } else {
-            let password_fingerprint = parts[1].trim_start_matches("fp=");
-            let (data_type, data) = parts[2].split_once(",").ok_or(DataError::InvalidData)?;
-            (
-                Some(password_fingerprint.to_string()),
-                Some(data_type.to_string()),
+        // Encrypted payloads are encoded with a stable prefix. Do not heuristically split on ';'
+        // for unencrypted values, because semicolons can appear in plain strings.
+        let rhs = data.trim();
+        const ENCRYPTED_PREFIX: &str = "data:application/vnd.binqbit.svpi;";
+
+        if let Some(rest) = rhs.strip_prefix(ENCRYPTED_PREFIX) {
+            let (fp_part, rest) = rest.split_once(';').ok_or(DataError::InvalidData)?;
+            let fp = fp_part
+                .strip_prefix("fp=")
+                .ok_or(DataError::InvalidData)?;
+            if fp.trim().is_empty() {
+                return Err(DataError::InvalidData);
+            }
+
+            let (data_type, data) = rest.split_once(',').ok_or(DataError::InvalidData)?;
+            return FormattedData::from(
+                name,
                 data.to_string(),
-            )
-        };
+                Some(data_type.to_string()),
+                Some(fp.to_string()),
+            );
+        }
 
-        FormattedData::from(name, data, data_type, password_fingerprint)
+        FormattedData::from(name, rhs.to_string(), None, None)
     }
 }
 
@@ -600,5 +610,20 @@ mod tests {
         );
         assert_eq!(info2.fingerprint.fingerprint, info1.fingerprint.fingerprint);
         assert_eq!(info2.fingerprint.probe, 1);
+    }
+
+    #[test]
+    fn formatted_data_decode_unencrypted_allows_semicolons() {
+        let decoded = FormattedData::decode("name = hello;world").unwrap();
+        assert_eq!(decoded.name, "name");
+        assert_eq!(decoded.data, Data::Plain("hello;world".to_string()));
+        assert_eq!(decoded.data_type, DataType::Plain);
+        assert_eq!(decoded.password_fingerprint, None);
+    }
+
+    #[test]
+    fn formatted_data_decode_malformed_encrypted_rejected() {
+        // Missing ";<data_type>,<data>" part.
+        assert!(FormattedData::decode("name = data:application/vnd.binqbit.svpi;fp=cafebabe").is_err());
     }
 }

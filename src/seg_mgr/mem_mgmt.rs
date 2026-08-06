@@ -74,6 +74,11 @@ impl SegmentManager {
         }
 
         self.segments = segments;
+        self.segments_count = self
+            .segments
+            .len()
+            .try_into()
+            .map_err(|_| SegmentError::UpdateInfoError(DeviceError::WriteError))?;
         self.save_segments_count()
             .map_err(SegmentError::UpdateInfoError)?;
 
@@ -187,6 +192,7 @@ impl SegmentManager {
         self.save_metadata()
             .map_err(DataManagerError::DeviceError)?;
         self.segments = segments;
+        self.segments_count = segments_count;
 
         if new_memory_size > old_memory_size {
             let old_meta_start = old_memory_size

@@ -6,6 +6,7 @@ use std::{
 
 use borsh::BorshDeserialize;
 use borsh_derive::{BorshDeserialize, BorshSerialize};
+use crate::utils::file::write_sensitive_file;
 
 pub const CONFIG_FILE_NAME: &str = ".svpi";
 
@@ -80,24 +81,43 @@ impl SvpiConfig {
 
         let bytes = borsh::to_vec(&cfg)
             .map_err(|_| io::Error::new(ErrorKind::InvalidData, "Failed to serialize config"))?;
+        write_sensitive_file(path, &bytes)?;
+        Ok(())
+    }
+}
 
-        let Some(parent) = path.parent() else {
-            return Err(io::Error::new(
-                ErrorKind::InvalidInput,
-                "Invalid config path",
-            ));
-        };
-        let tmp_path = parent.join(format!("{CONFIG_FILE_NAME}.tmp"));
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        fs::write(&tmp_path, bytes)?;
-        if let Err(err) = fs::rename(&tmp_path, path) {
-            if err.kind() != ErrorKind::AlreadyExists {
-                return Err(err);
-            }
-            let _ = fs::remove_file(path);
-            fs::rename(&tmp_path, path)?;
+    #[cfg(unix)]
+    #[test]
+    fn save_to_path_tightens_permissions_on_unix() {
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("svpi-config-test-{unique}.svpi"));
+
+        let _ = fs::remove_file(&path);
+
+        let mut cfg = SvpiConfig::default();
+        cfg.mode = 1;
+        cfg.file = Some("vault.bin".to_string());
+        cfg.save_to_path(&path).expect("save_to_path");
+
+        let meta = fs::metadata(&path).expect("metadata");
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+
+            let mode = meta.permissions().mode() & 0o777;
+            assert_eq!(mode & 0o077, 0, "config perms must not grant group/other access");
         }
 
-        Ok(())
+        let _ = fs::remove_file(&path);
     }
 }

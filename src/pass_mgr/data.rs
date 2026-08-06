@@ -80,11 +80,10 @@ impl PasswordManager {
     }
 
     pub fn remove_password(&mut self, name: &str) -> Result<(), PasswordManagerError> {
-        if let Some(segment) = self.0.find_segment_by_name(name) {
-            segment
-                .remove()
-                .map_err(PasswordManagerError::RemovePasswordError)?;
-        }
+        let _ = self
+            .0
+            .remove_segment_by_name(name)
+            .map_err(PasswordManagerError::RemovePasswordError)?;
         Ok(())
     }
 

@@ -69,6 +69,14 @@ impl DataManager {
             DataManager::Memory(mgr) => mgr.init_memory(size),
         }
     }
+
+    pub fn byte_len(&self) -> Result<Option<u64>, DeviceError> {
+        match self {
+            DataManager::SerialPort(_) => Ok(None),
+            DataManager::FileSystem(mgr) => Ok(Some(mgr.byte_len()?)),
+            DataManager::Memory(mgr) => Ok(Some(mgr.byte_len()?)),
+        }
+    }
 }
 
 impl DataManagerExt for DataManager {

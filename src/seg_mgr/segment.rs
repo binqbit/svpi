@@ -66,6 +66,26 @@ impl Segment {
 }
 
 impl SegmentManager {
+    pub fn remove_segment_by_name(&mut self, name: &str) -> Result<bool, SegmentError> {
+        let Some(index) = self
+            .segments
+            .iter()
+            .position(|seg| seg.get_name() == name)
+        else {
+            return Ok(false);
+        };
+
+        {
+            let seg = &mut self.segments[index];
+            seg.remove()?;
+        }
+
+        // Keep only active segments in memory; deleted entries remain on disk and are tracked
+        // via `segments_count` until an optimize/resize compaction.
+        self.segments.remove(index);
+        Ok(true)
+    }
+
     pub fn set_segment<'a>(
         &'a mut self,
         name: &str,
@@ -79,9 +99,7 @@ impl SegmentManager {
             return Ok(None);
         };
 
-        if let Some(old_seg) = self.find_segment_by_name(name) {
-            old_seg.remove()?;
-        }
+        let _ = self.remove_segment_by_name(name)?;
 
         let info = DataInfo::new(
             name,
@@ -97,7 +115,7 @@ impl SegmentManager {
                 .collect::<Vec<_>>(),
         );
 
-        let meta_address = self.segment_meta_address(self.segments.len() as u32);
+        let meta_address = self.segment_meta_address(self.segments_count);
         let mut segment = Segment::new(self.data_mgr.clone(), meta_address, info);
         segment.write_data(&data)?;
         self.add_segment_meta(segment)

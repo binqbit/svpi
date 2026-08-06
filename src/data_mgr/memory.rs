@@ -22,6 +22,11 @@ impl MemoryDataManager {
         Ok(())
     }
 
+    pub fn byte_len(&self) -> Result<u64, DeviceError> {
+        let data = self.data.lock().expect("Failed to lock data");
+        Ok(data.len() as u64)
+    }
+
     pub fn read_data(&self, address: u32, size: usize) -> Result<Vec<u8>, DeviceError> {
         let data = self.data.lock().expect("Failed to lock data");
 

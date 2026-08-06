@@ -1,10 +1,12 @@
 use std::{
     fs::{File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
+    path::Path,
     sync::{Arc, Mutex},
 };
 
 use crate::data_mgr::DeviceError;
+use crate::utils::file::enforce_private_permissions;
 
 #[derive(Debug, Clone)]
 pub struct FileSystemDataManager {
@@ -13,6 +15,7 @@ pub struct FileSystemDataManager {
 
 impl FileSystemDataManager {
     pub fn open_file(path: &str) -> Result<Self, DeviceError> {
+        let path = Path::new(path);
         let mut options = OpenOptions::new();
         options.read(true).write(true).create(true);
 
@@ -26,18 +29,7 @@ impl FileSystemDataManager {
             .open(path)
             .map_err(|_| DeviceError::DeviceNotFound)?;
 
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            if let Ok(meta) = file.metadata() {
-                let mode = meta.permissions().mode() & 0o777;
-                if mode & 0o077 != 0 {
-                    let mut perms = meta.permissions();
-                    perms.set_mode(0o600);
-                    let _ = file.set_permissions(perms);
-                }
-            }
-        }
+        enforce_private_permissions(path).map_err(|_| DeviceError::DeviceNotFound)?;
         Ok(Self {
             file: Arc::new(Mutex::new(file)),
         })
@@ -50,6 +42,13 @@ impl FileSystemDataManager {
         file.set_len(size as u64)
             .map_err(|_| DeviceError::InitMemoryError)?;
         Ok(())
+    }
+
+    pub fn byte_len(&self) -> Result<u64, DeviceError> {
+        let file = self.file.lock().expect("Failed to lock file");
+        file.metadata()
+            .map(|m| m.len())
+            .map_err(|_| DeviceError::ReadError)
     }
 
     pub fn read_data(&mut self, address: u32, size: usize) -> Result<Vec<u8>, DeviceError> {

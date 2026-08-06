@@ -25,7 +25,7 @@ impl SegmentManager {
     }
 
     pub fn end_data_address(&self) -> u32 {
-        self.segments_info_address() - self.segments.len() as u32 * SEGMENT_INFO_SIZE as u32
+        self.segments_info_address() - self.segments_count * SEGMENT_INFO_SIZE as u32
     }
 
     pub fn segment_meta_address(&self, index: u32) -> u32 {

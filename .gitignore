@@ -1,6 +1,5 @@
 /target
 /bin/svpi.exe
 /bin/svpi
-Cargo.lock
 .svpi
 test.bin

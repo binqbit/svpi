@@ -18,6 +18,7 @@ use crate::{
     seg_mgr::{Data, DataType, EncryptionLevel, FormattedData, DATA_FINGERPRINT_SIZE},
     utils::{
         dump,
+        file::write_sensitive_file,
         response::{OutputFormat, SvpiResponse},
         terminal,
     },
@@ -691,7 +692,8 @@ fn execute_with_output(
                 list.push(formatted);
             }
 
-            if let Err(err) = fs::write(&file_path, list.join("\n")) {
+            if let Err(err) = write_sensitive_file(Path::new(&file_path), list.join("\n").as_bytes())
+            {
                 return SvpiResponse::err(cmd_out, "io_error", err.to_string(), None)
                     .with_exit_code();
             }
@@ -830,7 +832,7 @@ fn execute_with_output(
                 dump_protection = dump::protection_code(protection);
             }
 
-            if let Err(err) = fs::write(&file_path, &dump) {
+            if let Err(err) = write_sensitive_file(Path::new(&file_path), &dump) {
                 return SvpiResponse::err(cmd_out, "io_error", err.to_string(), None)
                     .with_exit_code();
             }

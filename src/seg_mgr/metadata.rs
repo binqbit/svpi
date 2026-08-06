@@ -3,7 +3,10 @@ use borsh_derive::{BorshDeserialize, BorshSerialize};
 
 use crate::{
     data_mgr::{DataManager, DataManagerExt, DeviceError},
-    seg_mgr::{DataError, DataInfo, SegmentError, METADATA_SIZE, SEGMENT_INFO_SIZE},
+    seg_mgr::{
+        DataError, DataInfo, DataManagerError, SegmentError, METADATA_SIZE, SEGMENT_INFO_SIZE,
+        DATA_NAME_SIZE,
+    },
 };
 
 use super::{EncryptionLevel, Segment, SegmentManager, ARCHITECTURE_VERSION};
@@ -11,6 +14,7 @@ use super::{EncryptionLevel, Segment, SegmentManager, ARCHITECTURE_VERSION};
 pub const START_INIT_DATA: &[u8] = b"\0<METADATA>\0";
 pub const END_INIT_DATA: &[u8] = b"\0</METADATA>\0";
 pub const MASTER_PASSWORD_HASH_SIZE: usize = 32;
+const MAX_SEGMENTS_COUNT: usize = 1_000_000;
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct Metadata {
@@ -94,7 +98,7 @@ impl SegmentManager {
 
     pub fn save_segments_count(&mut self) -> Result<(), DeviceError> {
         self.data_mgr
-            .write_value(self.segments_info_address(), self.segments.len() as u32)
+            .write_value(self.segments_info_address(), self.segments_count)
     }
 
     pub fn save_segment_meta(&mut self, seg: &Segment) -> Result<(), DeviceError> {
@@ -105,36 +109,94 @@ impl SegmentManager {
     pub fn add_segment_meta(&mut self, segment: Segment) -> Result<(), DeviceError> {
         self.save_segment_meta(&segment)?;
         self.segments.insert(0, segment);
+        self.segments_count = self
+            .segments_count
+            .checked_add(1)
+            .ok_or(DeviceError::WriteError)?;
         self.save_segments_count()?;
         Ok(())
     }
 
-    pub fn load_segments(&mut self) -> Result<(), DeviceError> {
+    pub fn load_segments(&mut self) -> Result<(), DataManagerError> {
         self.segments.clear();
 
         let count = self
             .data_mgr
-            .read_value::<u32>(self.segments_info_address())? as usize;
+            .read_value::<u32>(self.segments_info_address())
+            .map_err(DataManagerError::DeviceError)?;
+        self.segments_count = count;
+
+        let count: usize = count
+            .try_into()
+            .map_err(|_| DataManagerError::InvalidArgument("segments_count overflow".to_string()))?;
         if count == 0 {
             return Ok(());
         }
 
+        if count > MAX_SEGMENTS_COUNT {
+            return Err(DataManagerError::InvalidArgument(format!(
+                "segments_count too large: {count} (max {MAX_SEGMENTS_COUNT})"
+            )));
+        }
+
         let total_size = count
             .checked_mul(SEGMENT_INFO_SIZE)
-            .ok_or(DeviceError::ReadError)?;
+            .ok_or_else(|| DataManagerError::InvalidArgument("segments_count overflow".to_string()))?;
         let start_address = self
             .segments_info_address()
             .checked_sub(total_size as u32)
-            .ok_or(DeviceError::ReadError)?;
+            .ok_or_else(|| {
+                DataManagerError::InvalidArgument(
+                    "segments metadata table out of bounds (corrupt segments_count)".to_string(),
+                )
+            })?;
 
-        let data = self.data_mgr.read_data(start_address, total_size)?;
-        if data.len() < total_size {
-            return Err(DeviceError::ReadError);
-        }
+        let start_data_address = self.start_data_address();
 
-        for (i, chunk) in data.chunks_exact(SEGMENT_INFO_SIZE).enumerate() {
-            let info = DataInfo::unpack(chunk).map_err(|_| DeviceError::ReadError)?;
-            let meta_address = start_address + (i as u32) * SEGMENT_INFO_SIZE as u32;
+        // Read segment metadata entries incrementally to avoid allocating `count * SEGMENT_INFO_SIZE`
+        // bytes in one go (can be abused for memory DoS with crafted/sparse vault files).
+        for i in 0..count {
+            let meta_address = start_address
+                .checked_add((i as u32).saturating_mul(SEGMENT_INFO_SIZE as u32))
+                .ok_or_else(|| {
+                    DataManagerError::InvalidArgument("segment meta address overflow".to_string())
+                })?;
+
+            let bytes = self
+                .data_mgr
+                .read_data(meta_address, SEGMENT_INFO_SIZE)
+                .map_err(DataManagerError::DeviceError)?;
+            if bytes.len() < SEGMENT_INFO_SIZE {
+                return Err(DataManagerError::DeviceError(DeviceError::ReadError));
+            }
+
+            let info = DataInfo::unpack(&bytes).map_err(|_| {
+                DataManagerError::InvalidArgument("invalid segment metadata".to_string())
+            })?;
+
+            // Only keep active segments in memory; deleted entries can be numerous and wasteful.
+            if info.name == [0; DATA_NAME_SIZE] {
+                continue;
+            }
+
+            // Basic bounds validation for active segments: ensure payload lies in the payload region
+            // and does not overlap the metadata table.
+            if info.address < start_data_address {
+                return Err(DataManagerError::InvalidArgument(format!(
+                    "invalid segment metadata: segment #{i} has out-of-bounds address"
+                )));
+            }
+            let end = info.address.checked_add(info.size).ok_or_else(|| {
+                DataManagerError::InvalidArgument(format!(
+                    "invalid segment metadata: segment #{i} address+size overflow"
+                ))
+            })?;
+            if end > start_address {
+                return Err(DataManagerError::InvalidArgument(format!(
+                    "invalid segment metadata: segment #{i} payload overlaps metadata table"
+                )));
+            }
+
             let segment = Segment::new(self.data_mgr.clone(), meta_address, info);
             self.segments.push(segment);
         }
